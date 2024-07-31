@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+<a href="https://www.opendocuchat.com">
+  <img src="./public/image/logo.svg" width="96px" alt="OpenDocuChat logo" />
+</a>
 
-## Getting Started
+# Open-source AI chatbot for technical documentation websites
 
-First, run the development server:
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=OpenDocuChat&integration-ids=icfg_Z8kxSsCKGrekHQBKsPU26XX6,github)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### TODO
+
+1. Set up the following project structure
+
+```mermaid
+graph TD
+    A[Project Root] --> B[src]
+    A --> C[public]
+    A --> D[package.json]
+    A --> E[next.config.js]
+    A --> F[tsconfig.json]
+    A --> G[README.md]
+    A --> J[database-migrations]
+    B --> H[app]
+    B --> I[components]
+    H --> L[api]
+    H --> M[page.tsx]
+    H --> N[widget]
+    C --> T[widget-loader.js]
+    B --> U[lib]
+    N --> V[page.tsx]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up database migrations. Custom function, support only up migrations, save status in a table in a schema. Read migrations from a folder. Example migration file name: `00001-create-data-source-table.sql`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Test Together AI / Replica AI setup
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Later
+- set up auth.js
+- Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
