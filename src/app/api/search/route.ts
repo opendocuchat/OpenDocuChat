@@ -2,7 +2,7 @@ export async function GET(request: Request) {
   console.time("Total search time")
 
   // TODO: Remove tenant id
-  const tenantId = 1
+  // const tenantId = 1
 
   // TODO: Replace Supabase with Vercel Postgres and Cohere with Vercel AI Integrations?
   /* console.time("Parse request")

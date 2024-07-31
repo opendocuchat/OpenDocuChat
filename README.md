@@ -35,5 +35,6 @@ graph TD
 
 Later
 - set up auth.js
+    - automate saving auth.js secret to vercel (vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p'))
 - Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 

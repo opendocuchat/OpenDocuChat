@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     message: message,
     model: "command-r",
     preamble:
-      "Respond briefly as a chatbot for a technical documentation page for a game development engine called Quicksave. Users ask you questions about the engine, or just mention keywords related to the engine or development that they want to get a brief explanation for, based on the documentation you have. You don't just mention technical details, but explain to a not very technical user what they are used for and how they can be used. Quicksave Toolkit is built on top of Pixi.JS and helps developers leverage the power of HTML5 and WebGL. You respond very concise, but with several useful information to understand what is available in quicksave's tools and suitable to the user query, and how to use it.",
+      "ToDo",
     promptTruncation: "AUTO",
     documents: documents,
   })

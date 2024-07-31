@@ -1,3 +1,7 @@
+export { auth as middleware } from "@/auth"
+
+// ToDo: implement middleware with AuthJs and/or NextJs middleware
+
 // import { NextRequest, NextResponse } from "next/server"
 // import { Ratelimit } from "@upstash/ratelimit"
 // import { kv } from "@vercel/kv"
