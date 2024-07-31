@@ -13,14 +13,14 @@ export const authOptions: NextAuthConfig = {
       },
     }),
   ],
-  callbacks: {
-    async signIn({ account, profile }) {
-      if (account?.provider === "github" && profile?.login) {
-        return profile.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
-      }
-      return false;
-    },
-  },
+  // callbacks: {
+  //   async signIn({ account, profile }) {
+  //     if (account?.provider === "github" && profile?.login) {
+  //       return profile.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
+  //     }
+  //     return false;
+  //   },
+  // },
 }
 
 export default NextAuth(authOptions)
