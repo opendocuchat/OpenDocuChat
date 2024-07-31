@@ -1,27 +1,28 @@
+// pages/api/auth/[...nextauth].ts
 import NextAuth from "next-auth"
+import type { NextAuthConfig } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthConfig = {
   providers: [
     GithubProvider({
-      clientId: process.env.AUTH_GITHUB_ID,
-      clientSecret: process.env.AUTH_GITHUB_SECRET,
+      clientId: process.env.AUTH_GITHUB_ID ?? "",
+      clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
       authorization: {
-        params: {
-          prompt: "consent",
-        },
+        params: { scope: "read:user user:email" }
       },
     }),
   ],
   callbacks: {
     async signIn({ account, profile }) {
-      if (account?.provider === "github") {
-        return profile?.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
+      if (account?.provider === "github" && profile?.login) {
+        return profile.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
       }
       return false;
     },
   },
-  pages: {
-    signIn: '/auth/signin',
-  },
-})
+}
+
+export default NextAuth(authOptions)
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authOptions)
