@@ -1,4 +1,4 @@
-// pages/api/auth/[...nextauth].ts
+// src/auth.ts
 import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
@@ -9,7 +9,7 @@ export const authOptions: NextAuthConfig = {
       clientId: process.env.AUTH_GITHUB_ID ?? "",
       clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
       authorization: {
-        params: { scope: "read:user user:email" }
+        params: { scope: "read:user" }
       },
     }),
   ],

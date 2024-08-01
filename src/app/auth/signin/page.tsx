@@ -1,3 +1,4 @@
+// app/auth/signin/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -19,7 +20,7 @@ export default function SignIn() {
 
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      setAuthStatus(`Authenticated as ${session.user?.name || session.user?.email}`)
+      setAuthStatus(`Authenticated as ${session.user?.name}`)
     } else if (status === 'loading') {
       setAuthStatus('Checking authentication status...')
     } else {
@@ -30,7 +31,7 @@ export default function SignIn() {
 
   const initiateDeviceFlow = async () => {
     try {
-      const res = await fetch('/api/auth/device-code', {
+      const res = await fetch('/api/auth/github/device-code', {
         method: 'POST',
       })
       if (!res.ok) {
@@ -46,14 +47,14 @@ export default function SignIn() {
 
   const checkAuthStatus = async () => {
     if (status === 'authenticated') {
-      setAuthStatus(`Already authenticated as ${session?.user?.name || session?.user?.email}`)
+      setAuthStatus(`Already authenticated as ${session?.user?.name}`)
       return
     }
 
     setAuthStatus('Checking authentication...')
     if (deviceCode) {
       try {
-        const result = await fetch('/api/auth/callback/github', {
+        const result = await fetch('/api/auth/github/callback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ device_code: deviceCode.device_code }),
@@ -62,13 +63,17 @@ export default function SignIn() {
         if (data.error) {
           if (data.error === 'authorization_pending') {
             setAuthStatus('Waiting for user authorization...')
+            setTimeout(checkAuthStatus, (deviceCode.interval || 5) * 1000)
           } else {
             setError(`Authentication failed: ${data.error}`)
             setAuthStatus('Authentication failed')
           }
         } else {
           setAuthStatus('Authentication successful, updating session...')
-          await update()
+          await update({
+            user: data.user,
+            accessToken: data.access_token,
+          })
         }
       } catch (error) {
         console.error('Error during authentication:', error)
@@ -94,7 +99,7 @@ export default function SignIn() {
       {session && (
         <div>
           <h2>Session Info:</h2>
-          <pre>{JSON.stringify(session, null, 2)}</pre>
+          <pre>{JSON.stringify({ name: session.user?.name, image: session.user?.image }, null, 2)}</pre>
         </div>
       )}
     </div>

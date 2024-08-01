@@ -1,3 +1,4 @@
+// app/api/auth/github/device-code/route.ts
 import { NextResponse } from 'next/server'
 
 export async function POST() {
@@ -10,7 +11,7 @@ export async function POST() {
       },
       body: JSON.stringify({
         client_id: process.env.AUTH_GITHUB_ID,
-        scope: 'read:user user:email'
+        scope: 'read:user'
       })
     })
     
