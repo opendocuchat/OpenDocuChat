@@ -1,6 +1,10 @@
+// temp version handled by nextauth
 export { auth as middleware } from "@/auth"
+// ToDo: combine with middleware that handles CORS and rate limiting
 
-// ToDo: implement middleware with AuthJs and/or NextJs middleware
+
+
+// working prior version with CORS and rate limiting
 
 // import { NextRequest, NextResponse } from "next/server"
 // import { Ratelimit } from "@upstash/ratelimit"
@@ -11,7 +15,7 @@ export { auth as middleware } from "@/auth"
 //   limiter: Ratelimit.slidingWindow(20, "1 m"),
 // })
 
-// const allowedOrigins = ['http://localhost:3000', 'http://localhost:1313', 'https://tools.quicksave.fi']
+// const allowedOrigins = ['http://localhost:3000', 'http://localhost:1313']
 
 // function setCORSHeaders(request: NextRequest, response: NextResponse) {
 //   const origin = request.headers.get('origin')
