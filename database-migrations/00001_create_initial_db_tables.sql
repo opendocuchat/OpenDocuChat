@@ -1,3 +1,8 @@
+CREATE TABLE user (
+  id SERIAL PRIMARY KEY,
+  github_username TEXT UNIQUE NOT NULL,
+)
+
 create extension vector;
 
 CREATE TABLE document (
