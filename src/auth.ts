@@ -1,22 +1,35 @@
-import NextAuth, { DefaultSession, NextAuthConfig } from "next-auth"
-import GithubProvider from "next-auth/providers/github"
+import NextAuth, { User } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    accessToken?: string;
-    user: {
-      id: string;
-    } & DefaultSession["user"]
-  }
-}
-
-export const authOptions: NextAuthConfig = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    GithubProvider({
-      clientId: process.env.AUTH_GITHUB_ID ?? "",
-      clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
-      authorization: {
-        params: { scope: "read:user" }
+    CredentialsProvider({
+      name: "credentials",
+      async authorize(credentials): Promise<User | null> {
+        console.log("credentials", credentials)
+        
+        if (!credentials?.accessToken) return null;
+    
+        const userResponse = await fetch('https://api.github.com/user', {
+          headers: {
+            'Authorization': `token ${credentials.accessToken}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!userResponse.ok) return null;
+    
+        const userData = await userResponse.json();
+        console.log("userData", userData)
+        console.log("process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN", process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN)
+
+        if (userData.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN) {
+          return {
+            id: userData.id.toString(),
+            name: userData.login,
+            image: userData.avatar_url
+          };
+        }
+        return null
       },
     }),
   ],
@@ -24,42 +37,4 @@ export const authOptions: NextAuthConfig = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken = account.access_token
-      }
-      return token
-    },
-    async session({ session, token }) {
-      session.accessToken = token.accessToken as string
-      return session
-    },
-  },
-}
-
-export default NextAuth(authOptions)
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions)
-
-
-// // src/auth.ts
-// import NextAuth from "next-auth"
-// import type { NextAuthConfig } from "next-auth"
-// import GithubProvider from "next-auth/providers/github"
-
-// export const authOptions: NextAuthConfig = {
-//   providers: [
-//     GithubProvider({
-//       clientId: process.env.AUTH_GITHUB_ID ?? "",
-//       clientSecret: process.env.AUTH_GITHUB_SECRET ?? "",
-//       authorization: {
-//         params: { scope: "read:user" }
-//       },
-//     }),
-//   ],
-// }
-
-// export default NextAuth(authOptions)
-
-// export const { handlers, auth, signIn, signOut } = NextAuth(authOptions)
+});
