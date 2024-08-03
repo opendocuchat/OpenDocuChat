@@ -5,31 +5,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     CredentialsProvider({
       name: "credentials",
+      
       async authorize(credentials): Promise<User | null> {
-        console.log("credentials", credentials)
-        
-        if (!credentials?.accessToken) return null;
-    
-        const userResponse = await fetch('https://api.github.com/user', {
-          headers: {
-            'Authorization': `token ${credentials.accessToken}`,
-            'Accept': 'application/vnd.github.v3+json'
+        if (!credentials?.device_code) return null;
+
+        const tokenResponse = await fetch(
+          "https://github.com/login/oauth/access_token",
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              client_id: process.env.AUTH_GITHUB_ID,
+              device_code: credentials.device_code,
+              grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+            }),
           }
+        );
+
+        const tokenData = await tokenResponse.json();
+        if (tokenData.error) return null;
+
+        const userResponse = await fetch("https://api.github.com/user", {
+          headers: {
+            Authorization: `token ${tokenData.access_token}`,
+            Accept: "application/vnd.github.v3+json",
+          },
         });
+
         if (!userResponse.ok) return null;
-    
+
         const userData = await userResponse.json();
-        console.log("userData", userData)
-        console.log("process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN", process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN)
 
         if (userData.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN) {
           return {
-            id: userData.id.toString(),
             name: userData.login,
-            image: userData.avatar_url
+            image: userData.avatar_url,
           };
         }
-        return null
+
+        return null;
       },
     }),
   ],
