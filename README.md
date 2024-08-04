@@ -26,6 +26,8 @@ graph TD
     H --> N[widget]
     C --> T[widget-embed-script.tsx]
     B --> U[lib]
+    L --> I[migrate-db]
+    I --> K[route.ts]
     N --> V[page.tsx]
 ```
 
@@ -35,6 +37,7 @@ graph TD
 
 Later
 - set up auth.js
+    - add OpenDocuChat github org ID to repo
     - automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
 - Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 

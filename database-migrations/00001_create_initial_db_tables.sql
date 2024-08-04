@@ -18,7 +18,8 @@ CREATE TABLE document (
 
 CREATE TABLE data_source (
   id SERIAL PRIMARY KEY,
-  starting_url TEXT NOT NULL,
+  name TEXT UNIQUE NOT NULL,
+  starting_url TEXT,
 );
 
 CREATE TYPE message_sender AS ENUM ('USER', 'BOT');
