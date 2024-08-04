@@ -7,11 +7,29 @@ export function WidgetEmbedScript() {
   const [widgetUrl, setWidgetUrl] = useState('');
 
   useEffect(() => {
-    // In a real deployment, VERCEL_URL will be set
-    // For local development, we'll use a fallback
-    const url = process.env.NEXT_PUBLIC_VERCEL_URL
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : 'http://localhost:3000';
+    let url;
+    const isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+    
+    if (isProduction) {
+      // Use the production URL for the main branch
+      url = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL 
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+        : null;
+    } else {
+      // For preview deployments, use the branch URL
+      url = process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL 
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL}`
+        : null;
+    }
+    
+    // Fallback to VERCEL_URL if the above are not available
+    if (!url && process.env.NEXT_PUBLIC_VERCEL_URL) {
+      url = `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+    }
+    
+    // Final fallback to current origin for local development or if all else fails
+    url = url || window.location.origin;
+
     setWidgetUrl(`${url}/widget`);
   }, []);
 

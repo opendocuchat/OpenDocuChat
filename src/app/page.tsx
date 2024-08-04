@@ -5,7 +5,7 @@ export default function Home() {
     <main className="p-8">
       <h1 className="text-3xl font-bold mb-4">Welcome to OpenDocuChat</h1>
       <p className="mb-4">
-        To embed the chat widget in your application, copy and paste the following script into your HTML. The Script URL will be automatically generated based on your deployment URL.
+        To embed the chat widget in your application, copy and paste the following script into your HTML. The Script URL is generated based on your deployment URL.
       </p>
       <WidgetEmbedScript />
       <div className="mt-8">
