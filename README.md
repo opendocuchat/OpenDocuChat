@@ -14,18 +14,17 @@
 ```mermaid
 graph TD
     A[Project Root] --> B[src]
-    A --> C[public]
     A --> D[package.json]
     A --> E[next.config.js]
     A --> F[tsconfig.json]
     A --> G[README.md]
     A --> J[database-migrations]
     B --> H[app]
-    B --> I[components]
+    B --> C[components]
     H --> L[api]
     H --> M[page.tsx]
     H --> N[widget]
-    C --> T[widget-loader.js]
+    C --> T[widget-embed-script.tsx]
     B --> U[lib]
     N --> V[page.tsx]
 ```

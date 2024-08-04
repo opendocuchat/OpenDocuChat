@@ -1,4 +1,4 @@
-import { WidgetEmbedScript } from '@/components/WidgetEmbedScript';
+import { WidgetEmbedScript } from '@/components/widget-embed-script';
 
 export default function Home() {
   return (
