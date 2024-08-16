@@ -46,9 +46,9 @@ async function processZipContents(
     try {
       const content = await file.async("string");
       const tokens = countTokens(content);
-      const uniqueUrl = `${repoUrl}/blob/main/${file.name}?timestamp=${uniqueTimestamp}`;
-
+      
       // TODO: Add back to store documents to db
+      // const uniqueUrl = `${repoUrl}/blob/${getDefaultBranch(repoUrl)}/${file.name}?timestamp=${uniqueTimestamp}`;
       // await sql`
       //   INSERT INTO document (url, content, active, metadata, data_source_id, created_at)
       //   VALUES (

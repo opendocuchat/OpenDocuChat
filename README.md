@@ -9,7 +9,7 @@
 
 ### TODO
 
-1. Set up the following project structure
+- [x] Set up the following project structure
 
 ```mermaid
 graph TD
@@ -31,13 +31,24 @@ graph TD
     N --> V[page.tsx]
 ```
 
-2. Set up database migrations. Custom function, support only up migrations, save status in a table in a schema. Read migrations from a folder. Example migration file name: `00001-create-data-source-table.sql`.
+- [x] Set up database migrations. Custom function, support only up migrations, save status in a table in a schema. Read migrations from a folder. Example migration file name: `00001-create-data-source-table.sql`.
 
-3. Test Together AI / Replica AI setup
+- [x] Test Together AI / Replica AI setup
 
-Later
-- set up auth.js
-    - add OpenDocuChat github org ID to repo
-    - automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
-- Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
+Indexing
+- [ ] Public Repo
+- - [ ] Index all
+- - [ ] Index subset (include/exclude logic)
+- [ ] Scrape Docu Website
 
+Querying
+- [ ] Boost certain files/folders
+
+Auth
+- [x] set up auth.js with github oauth
+- [ ] add OpenDocuChat github org ID to repo
+- [ ] use db table to verify which users have access
+- [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
+
+Other
+- [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production

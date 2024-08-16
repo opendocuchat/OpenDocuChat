@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { IndexingProgress } from "../api/index/add/repo/route";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-export default function IndexingPage() {
+export default function ManageIndexPage() {
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState<IndexingProgress | null>(null);
@@ -60,19 +62,19 @@ export default function IndexingPage() {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">GitHub Repo Indexing</h1>
       <form onSubmit={handleSubmit} className="mb-4">
-        <input
-          type="text"
+        <Input
+          type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="Enter GitHub repo URL"
-          className="w-full p-2 border rounded"
+          className="p-2 mt-2"
         />
-        <button
+        <Button
           type="submit"
-          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
+          className="mt-2 px-4 py-2"
         >
           Index Repo
-        </button>
+        </Button>
       </form>
       {message && <p className="text-lg mb-4">{message}</p>}
       {progress && (
@@ -84,7 +86,7 @@ export default function IndexingPage() {
           </p>
           <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
             <div
-              className="bg-blue-600 h-2.5 rounded-full"
+              className="bg-teal-500 h-2.5 rounded-full"
               style={{
                 width: `${
                   (progress.processedFiles / progress.totalFiles) * 100
