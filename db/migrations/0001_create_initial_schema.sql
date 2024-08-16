@@ -1,9 +1,10 @@
-CREATE TABLE user (
-  id SERIAL PRIMARY KEY,
-  github_username TEXT UNIQUE NOT NULL,
-)
+CREATE EXTENSION IF NOT EXISTS vector;
 
-create extension vector;
+CREATE TABLE data_source (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  starting_url TEXT
+);
 
 CREATE TABLE document (
   id SERIAL PRIMARY KEY,
@@ -13,13 +14,7 @@ CREATE TABLE document (
   active BOOLEAN,
   metadata JSONB,
   data_source_id INT NOT NULL REFERENCES data_source(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-);
-
-CREATE TABLE data_source (
-  id SERIAL PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL,
-  starting_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TYPE message_sender AS ENUM ('USER', 'BOT');
@@ -30,7 +25,7 @@ CREATE TABLE message (
   sender message_sender NOT NULL,
   content TEXT,
   document_ids INT[],
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE citation (
@@ -38,7 +33,7 @@ CREATE TABLE citation (
   message_id INT NOT NULL REFERENCES message(id),
   document_id INT NOT NULL REFERENCES document(id),
   highlight_start_index INT,
-  highlight_end_index INT,
+  highlight_end_index INT
 );
 
 -- CREATE TYPE scraping_url_status AS ENUM ('URL_FOUND', 'PROCESSING', 'CANCELLED', 'COMPLETED', 'FAILED');
@@ -55,5 +50,5 @@ CREATE TABLE citation (
 -- CREATE TABLE scraping_run (
 --   id SERIAL PRIMARY KEY,
 --   data_source_id INT NOT NULL REFERENCES data_source(id),
---   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 -- );
