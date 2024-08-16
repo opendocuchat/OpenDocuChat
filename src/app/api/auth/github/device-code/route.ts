@@ -11,7 +11,6 @@ export async function POST() {
       },
       body: JSON.stringify({
         client_id: process.env.AUTH_GITHUB_ID,
-        scope: 'read:user'
       })
     })
     
