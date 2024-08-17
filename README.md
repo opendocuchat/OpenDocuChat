@@ -16,7 +16,6 @@ graph TD
     A[Project Root] --> B[src]
     A --> E[scripts]
     E --> F[migrate-db.js]
-    A --> D[configs (package.json,next.config.js, tsconfig.json)]
     A --> G[README.md]
     A --> J[db]
     J --> Y[migrations]
