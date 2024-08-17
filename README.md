@@ -14,11 +14,12 @@
 ```mermaid
 graph TD
     A[Project Root] --> B[src]
-    A --> D[package.json]
-    A --> E[next.config.js]
-    A --> F[tsconfig.json]
+    A --> E[scripts]
+    E --> F[migrate-db.js]
+    A --> D[configs (package.json,next.config.js, tsconfig.json)]
     A --> G[README.md]
-    A --> J[database-migrations]
+    A --> J[db]
+    J --> Y[migrations]
     B --> H[app]
     B --> C[components]
     H --> L[api]
@@ -35,20 +36,20 @@ graph TD
 
 - [x] Test Together AI / Replica AI setup
 
-Indexing
+**Indexing**
 - [ ] Public Repo
 - - [ ] Index all
 - - [ ] Index subset (include/exclude logic)
 - [ ] Scrape Docu Website
 
-Querying
+**Querying**
 - [ ] Boost certain files/folders
 
-Auth
+**Auth**
 - [x] set up auth.js with github oauth
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] use db table to verify which users have access
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
 
-Other
+**Other**
 - [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production

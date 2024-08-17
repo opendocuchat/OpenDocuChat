@@ -10,7 +10,7 @@ const nextConfig = {
           compiler.hooks.afterEmit.tapPromise("RunMigrations", async () => {
             console.log("Running database migrations...");
             try {
-              execSync("node scripts/run-db-migrations.js", {
+              execSync("node scripts/migrate-db.js", {
                 stdio: "inherit",
               });
             } catch (error) {
