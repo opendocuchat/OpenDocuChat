@@ -37,19 +37,19 @@ export interface Citation {
   highlight_end_index: number;
 }
 
-// export type ScrapingStatus = 'QUEUED' | 'PROCESSING' | 'CANCELLED' | 'COMPLETED' | 'FAILED';
+export type ScrapingStatus = 'QUEUED' | 'PROCESSING' | 'CANCELLED' | 'COMPLETED' | 'FAILED';
 
-// export interface ScrapingUrl {
-//   id: number;
-//   scraping_run_id: number;
-//   url: string;
-//   status: ScrapingStatus;
-//   created_at: Date;
-//   updated_at: Date;
-// }
+export interface ScrapingUrl {
+  id: number;
+  scraping_run_id: number;
+  url: string;
+  status: ScrapingStatus;
+  created_at: Date;
+  updated_at: Date;
+}
 
-// export interface ScrapingRun {
-//   id: number;
-//   data_source_id: number;
-//   created_at: Date;
-// }
+export interface ScrapingRun {
+  id: number;
+  data_source_id: number;
+  created_at: Date;
+}
