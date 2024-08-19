@@ -1,3 +1,4 @@
+// src/app/api/index/add/repo/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from "@vercel/postgres";
 import { encodingForModel } from "js-tiktoken";
@@ -21,11 +22,6 @@ function generateUniqueTimestamp(): string {
   return new Date().toISOString().replace(/[-:\.]/g, "");
 }
 
-async function countFiles(zip: JSZip): Promise<number> {
-  const files = Object.values(zip.files).filter(file => !file.dir);
-  return files.length;
-}
-
 async function processZipContents(
   zip: JSZip,
   dataSourceId: number,
@@ -47,19 +43,19 @@ async function processZipContents(
       const content = await file.async("string");
       const tokens = countTokens(content);
       
-      // TODO: Add back to store documents to db
-      // const uniqueUrl = `${repoUrl}/blob/${getDefaultBranch(repoUrl)}/${file.name}?timestamp=${uniqueTimestamp}`;
-      // await sql`
-      //   INSERT INTO document (url, content, active, metadata, data_source_id, created_at)
-      //   VALUES (
-      //     ${uniqueUrl}::TEXT, 
-      //     ${content}::TEXT, 
-      //     ${true}::BOOLEAN, 
-      //     ${JSON.stringify({ path: file.name })}::JSONB, 
-      //     ${dataSourceId}::INTEGER, 
-      //     ${currentDate}::TIMESTAMP WITH TIME ZONE
-      //   )
-      // `;
+//       // TODO: Add back to store documents to db
+//       // const uniqueUrl = `${repoUrl}/blob/${getDefaultBranch(repoUrl)}/${file.name}?timestamp=${uniqueTimestamp}`;
+//       // await sql`
+//       //   INSERT INTO document (url, content, active, metadata, data_source_id, created_at)
+//       //   VALUES (
+//       //     ${uniqueUrl}::TEXT, 
+//       //     ${content}::TEXT, 
+//       //     ${true}::BOOLEAN, 
+//       //     ${JSON.stringify({ path: file.name })}::JSONB, 
+//       //     ${dataSourceId}::INTEGER, 
+//       //     ${currentDate}::TIMESTAMP WITH TIME ZONE
+//       //   )
+//       // `;
 
       indexedFiles++;
       totalTokens += tokens;
@@ -139,7 +135,7 @@ export async function POST(req: NextRequest) {
 
         const zip = await JSZip.loadAsync(arrayBuffer);
         
-        const totalFiles = await countFiles(zip);
+        const totalFiles = Object.values(zip.files).filter(file => !file.dir).length;
         sendProgress(JSON.stringify({
           totalFiles,
           processedFiles: 0,
@@ -164,7 +160,7 @@ export async function POST(req: NextRequest) {
           totalFiles,
           processedFiles: totalFiles,
           totalTokens,
-          stage: 'complete'
+          stage: 'completed'
         }));
 
         controller.close();

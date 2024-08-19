@@ -16,7 +16,6 @@ export const togetherApi = async (message: Record<string, any>): Promise<string>
   })
 
   for await (const chunk of stream) {
-    // use process.stdout.write instead of console.log to avoid newlines
     process.stdout.write(chunk.choices[0]?.delta?.content || "")
   }
 

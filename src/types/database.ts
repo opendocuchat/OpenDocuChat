@@ -41,7 +41,7 @@ export interface Citation {
 
 // export interface ScrapingUrl {
 //   id: number;
-//   scraping_run: number;
+//   scraping_run_id: number;
 //   url: string;
 //   status: ScrapingStatus;
 //   created_at: Date;
