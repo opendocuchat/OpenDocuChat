@@ -150,7 +150,7 @@ const UrlTree: React.FC<UrlTreeProps> = ({
           {node.scrapeUrlId && (
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={() => handleFetchContent(node.scrapeUrlId!)}
               className="ml-2"
             >

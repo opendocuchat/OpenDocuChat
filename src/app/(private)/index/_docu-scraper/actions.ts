@@ -17,6 +17,8 @@ interface CrawlerSettings {
   excludeFileTypes: string[];
 }
 
+const MAX_CONCURRENT_PROCESSING = 3;
+
 async function getOrCreateDataSource(
   url: string,
   type: DataSourceType
@@ -82,7 +84,6 @@ function isIndexableUrl(
   basePath: string,
   settings: CrawlerSettings
 ): boolean {
-  console.log("settings", settings);
   try {
     const linkUrl = new URL(url);
     const baseUrlObj = new URL(baseUrl);
@@ -160,8 +161,6 @@ async function crawlUrlWithRetry(
 
       const uniqueLinks = Array.from(new Set(links));
 
-      console.log(`Found ${uniqueLinks.length} unique links on ${url}`);
-
       const indexableLinks = uniqueLinks
         .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
         .map((link) => {
@@ -169,8 +168,6 @@ async function crawlUrlWithRetry(
           url.hash = "";
           return url.toString();
         });
-
-      console.log(`${indexableLinks.length} indexable links found`);
 
       return { links: indexableLinks, content };
     } catch (error) {
@@ -228,45 +225,60 @@ async function scrapeUrls(
   startUrl: string,
   settings: CrawlerSettings
 ) {
-  console.log(
-    `Starting scrape for run ${scrapingRunId} with start URL: ${startUrl}`
-  );
   const browser = await setupBrowser();
   const page = await setupPage(browser);
 
   try {
-    while (true) {
-      const isCancelled = await isScrapingCancelled(scrapingRunId);
-      if (isCancelled) {
-        console.log(`Scraping run ${scrapingRunId} has been cancelled`);
-        await cancelScrapingRun(scrapingRunId);
-        break;
-      }
-
-      const nextUrl = await getNextUrlToCrawl(scrapingRunId);
-      if (!nextUrl) {
-        console.log(`No more URLs to crawl for run ${scrapingRunId}`);
-        break;
-      }
-      await updateUrlStatus(nextUrl.id, ScrapingStatus.PROCESSING);
-      const { links: discoveredUrls, content } = await crawlUrlWithRetry(
-        nextUrl.url,
-        page,
-        startUrl,
-        settings
+    const isCancelled = await isScrapingCancelled(scrapingRunId);
+    if (isCancelled) {
+      console.log(
+        `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
       );
-
-      await Promise.all([
-        parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
-        updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
-        saveScrapedContent(nextUrl.id, content),
-      ]);
+      await cancelScrapingRun(scrapingRunId);
+      return;
     }
+
+    const processingCount = await getProcessingUrlsCount(scrapingRunId);
+    if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+      console.log(`Max concurrent processing reached. Exiting this iteration.`);
+      return;
+    }
+
+    const nextUrl = await getNextUrlToCrawl(scrapingRunId);
+    if (!nextUrl) {
+      console.log(`No more URLs to crawl for run ${scrapingRunId}`);
+      return;
+    }
+
+    const { links: discoveredUrls, content } = await crawlUrlWithRetry(
+      nextUrl.url,
+      page,
+      startUrl,
+      settings
+    );
+
+    await Promise.all([
+      parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
+      updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
+      saveScrapedContent(nextUrl.id, content),
+    ]);
+
+    // Recursive call to continue scraping
+    await scrapeUrls(scrapingRunId, startUrl, settings);
   } catch (error) {
     console.error("Crawling failed:", error);
   } finally {
     await browser.close();
   }
+}
+
+async function getProcessingUrlsCount(scrapingRunId: number): Promise<number> {
+  const result = await sql`
+    SELECT COUNT(*) as count
+    FROM scraping_url
+    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING}
+  `;
+  return result.rows[0].count;
 }
 
 async function saveScrapedContent(urlId: number, content: string) {
@@ -295,13 +307,82 @@ export async function startDocuScraper(
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    scrapeUrls(scrapingRunId, startUrl, settings).catch(console.error);
+    // Start the initial scraper
+    scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
 
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
     console.error("Error starting scraper:", error);
     return { success: false, error: "Failed to start scraping" };
   }
+}
+
+async function scrapeUrlsBatch(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
+  const browser = await setupBrowser();
+  const page = await setupPage(browser);
+
+  const startTime = Date.now();
+  const timeoutDuration = 50000; // 50 seconds, leaving some buffer for cleanup
+
+  try {
+    while (Date.now() - startTime < timeoutDuration) {
+      const isCancelled = await isScrapingCancelled(scrapingRunId);
+      if (isCancelled) {
+        console.log(
+          `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
+        );
+        await cancelScrapingRun(scrapingRunId);
+        return;
+      }
+
+      const processingCount = await getProcessingUrlsCount(scrapingRunId);
+      if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+        console.log(
+          `Max concurrent processing reached. Waiting before next attempt.`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      const nextUrl = await getNextUrlToCrawl(scrapingRunId);
+      if (!nextUrl) {
+        console.log(
+          `No more URLs to crawl for run ${scrapingRunId}. Waiting before next attempt.`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        continue;
+      }
+
+      if (processingCount < MAX_CONCURRENT_PROCESSING - 1) {
+        console.log("Triggering additional scraper");
+        scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+      }
+
+      const { links: discoveredUrls, content } = await crawlUrlWithRetry(
+        nextUrl.url,
+        page,
+        startUrl,
+        settings
+      );
+
+      await Promise.all([
+        parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
+        updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
+        saveScrapedContent(nextUrl.id, content),
+      ]);
+    }
+  } catch (error) {
+    console.error("Crawling failed:", error);
+  } finally {
+    await browser.close();
+  }
+
+  console.log("Current batch completed. Triggering next batch.");
+  scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
 }
 
 async function createScrapingRun(url: string) {
@@ -327,13 +408,10 @@ async function addUrlToScrape(scrapingRunId: number, url: string) {
     `;
 
   if (existingUrl.rows.length === 0) {
-    console.log(`New URL added to scrape: ${url}`);
     await sql`
         INSERT INTO scraping_url (scraping_run_id, url, status)
         VALUES (${scrapingRunId}, ${url}, ${ScrapingStatus.QUEUED})
       `;
-  } else {
-    console.log(`Existing URL already in db: ${url}`);
   }
 }
 
@@ -341,12 +419,20 @@ async function getNextUrlToCrawl(
   scrapingRunId: number
 ): Promise<ScrapingUrl | null> {
   const result = await sql<ScrapingUrl>`
+    WITH next_url AS (
       SELECT id, url, status
       FROM scraping_url
       WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
-      ORDER BY id ASC
+      ORDER BY RANDOM()
       LIMIT 1
-    `;
+      FOR UPDATE SKIP LOCKED
+    )
+    UPDATE scraping_url
+    SET status = ${ScrapingStatus.PROCESSING}, updated_at = CURRENT_TIMESTAMP
+    FROM next_url
+    WHERE scraping_url.id = next_url.id
+    RETURNING scraping_url.id, scraping_url.url, scraping_url.status
+  `;
 
   return result.rows[0] || null;
 }
@@ -369,7 +455,6 @@ export async function fetchScrapingResults(
   `;
 
   const urls = result.rows;
-  console.log("number of urls from db:", urls.length);
 
   if (urls.length === 0) {
     return {
