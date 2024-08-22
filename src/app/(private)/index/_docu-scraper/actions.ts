@@ -9,21 +9,12 @@ import {
   ScrapingUrl,
 } from "@/types/database";
 import { NextResponse } from "next/server";
+import { UrlTreeNode } from "./url-tree";
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
   excludeFileTypes: string[];
-}
-
-export interface TreeNode {
-  name: string;
-  path: string;
-  type: "file" | "directory";
-  children?: TreeNode[];
-  selected: boolean;
-  expanded?: boolean;
-  status?: ScrapingStatus;
 }
 
 async function getOrCreateDataSource(
@@ -370,12 +361,12 @@ async function updateUrlStatus(id: number, status: ScrapingStatus) {
 
 export async function fetchScrapingResults(
   scrapingRunId: number
-): Promise<TreeNode> {
+): Promise<UrlTreeNode> {
   const result = await sql<ScrapingUrl>`
-      SELECT id, url, status
-      FROM scraping_url
-      WHERE scraping_run_id = ${scrapingRunId}
-    `;
+    SELECT id, url, status
+    FROM scraping_url
+    WHERE scraping_run_id = ${scrapingRunId}
+  `;
 
   const urls = result.rows;
   console.log("number of urls from db:", urls.length);
@@ -393,7 +384,7 @@ export async function fetchScrapingResults(
 
   const baseUrl = new URL(urls[0].url).origin;
 
-  const root: TreeNode = {
+  const root: UrlTreeNode = {
     name: baseUrl,
     path: "/",
     type: "directory",
@@ -402,7 +393,7 @@ export async function fetchScrapingResults(
     expanded: true,
   };
 
-  urls.forEach(({ url, status }) => {
+  urls.forEach(({ id, url, status }) => {
     const parsedUrl = new URL(url);
     const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
 
@@ -423,11 +414,13 @@ export async function fetchScrapingResults(
           selected: false,
           expanded: true,
           status: isLastPart ? (status as ScrapingStatus) : undefined,
+          scrapeUrlId: isLastPart ? id : undefined,
         };
         currentNode.children = currentNode.children || [];
         currentNode.children.push(childNode);
       } else if (isLastPart) {
         childNode.status = status as ScrapingStatus;
+        childNode.scrapeUrlId = id;
       }
 
       currentNode = childNode;
@@ -435,6 +428,22 @@ export async function fetchScrapingResults(
   });
 
   return root;
+}
+
+export async function fetchUrlContent(
+  scrapeUrlId: number
+): Promise<string | null> {
+  const result = await sql<{ content: string }>`
+    SELECT content
+    FROM scraping_url
+    WHERE id = ${scrapeUrlId}
+  `;
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].content;
 }
 
 export async function isScrapingComplete(

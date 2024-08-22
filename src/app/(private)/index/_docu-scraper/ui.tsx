@@ -12,8 +12,7 @@ import {
   isScrapingComplete,
   cancelScrapingRun,
 } from "./actions";
-import { TreeNode } from "./actions";
-import UrlTree from "./url-tree";
+import UrlTree, { UrlTreeNode } from "./url-tree";
 
 export default function DocuScraper() {
   const [url, setUrl] = useState("");
@@ -23,7 +22,7 @@ export default function DocuScraper() {
     excludeFileTypes: ["jpg", "jpeg", "png", "gif", "mov", "mp4", "mp3"],
   });
   const [scrapingRunId, setScrapingRunId] = useState<number | null>(null);
-  const [treeData, setTreeData] = useState<TreeNode | null>(null);
+  const [treeData, setTreeData] = useState<UrlTreeNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [excludeFileTypesInput, setExcludeFileTypesInput] = useState(

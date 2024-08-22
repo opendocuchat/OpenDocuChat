@@ -1,30 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { TreeNode } from './actions';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrapingStatus } from '@/types/database';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrapingStatus } from "@/types/database";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { fetchUrlContent } from "./actions";
 
 interface UrlTreeProps {
-  tree: TreeNode;
+  tree: UrlTreeNode;
   onSelectionChange: (selectedPaths: string[]) => void;
   isLoading: boolean;
 }
 
-const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange, isLoading }) => {
-  const [tree, setTree] = useState<TreeNode>(initialTree);
+export interface UrlTreeNode {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  children?: UrlTreeNode[];
+  selected: boolean;
+  expanded?: boolean;
+  status?: ScrapingStatus;
+  scrapeUrlId?: number;
+}
+
+const UrlTree: React.FC<UrlTreeProps> = ({
+  tree: initialTree,
+  onSelectionChange,
+  isLoading,
+}) => {
+  const [tree, setTree] = useState<UrlTreeNode>(initialTree);
+  const [contentMap, setContentMap] = useState<Record<number, string | null>>(
+    {}
+  );
+  const [visibleContent, setVisibleContent] = useState<Record<number, boolean>>(
+    {}
+  );
 
   useEffect(() => {
     setTree(initialTree);
   }, [initialTree]);
 
+  const handleFetchContent = async (scrapeUrlId: number) => {
+    if (contentMap[scrapeUrlId] === undefined) {
+      try {
+        const content = await fetchUrlContent(scrapeUrlId);
+        setContentMap((prevMap) => ({ ...prevMap, [scrapeUrlId]: content }));
+        setVisibleContent((prevVisible) => ({
+          ...prevVisible,
+          [scrapeUrlId]: true,
+        }));
+      } catch (error) {
+        console.error("Error fetching content:", error);
+        setContentMap((prevMap) => ({ ...prevMap, [scrapeUrlId]: null }));
+      }
+    } else {
+      setVisibleContent((prevVisible) => ({
+        ...prevVisible,
+        [scrapeUrlId]: !prevVisible[scrapeUrlId],
+      }));
+    }
+  };
+
   const handleCheckboxChange = (path: string, checked: boolean) => {
-    const updateNodeAndChildren = (node: TreeNode): TreeNode => {
+    const updateNodeAndChildren = (node: UrlTreeNode): UrlTreeNode => {
       if (node.path.startsWith(path)) {
         return {
           ...node,
           selected: checked,
-          children: node.children?.map(updateNodeAndChildren)
+          children: node.children?.map(updateNodeAndChildren),
         };
       }
       if (node.children) {
@@ -43,7 +85,7 @@ const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange,
   };
 
   const toggleExpand = (path: string) => {
-    const updateNode = (node: TreeNode): TreeNode => {
+    const updateNode = (node: UrlTreeNode): UrlTreeNode => {
       if (node.path === path) {
         return { ...node, expanded: !node.expanded };
       }
@@ -60,16 +102,22 @@ const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange,
 
   const getStatusColor = (status: ScrapingStatus) => {
     switch (status) {
-      case ScrapingStatus.QUEUED: return 'text-yellow-500';
-      case ScrapingStatus.PROCESSING: return 'text-blue-500';
-      case ScrapingStatus.COMPLETED: return 'text-green-500';
-      case ScrapingStatus.CANCELLED: return 'text-red-500';
-      case ScrapingStatus.FAILED: return 'text-red-700';
-      default: return 'text-gray-500';
+      case ScrapingStatus.QUEUED:
+        return "text-yellow-500";
+      case ScrapingStatus.PROCESSING:
+        return "text-blue-500";
+      case ScrapingStatus.COMPLETED:
+        return "text-green-500";
+      case ScrapingStatus.CANCELLED:
+        return "text-red-500";
+      case ScrapingStatus.FAILED:
+        return "text-red-700";
+      default:
+        return "text-gray-500";
     }
   };
 
-  const renderTree = (node: TreeNode, depth: number = 0) => (
+  const renderTree = (node: UrlTreeNode, depth: number = 0) => (
     <div key={node.path} className={`ml-${depth * 4}`}>
       <div className="flex items-center justify-between py-1">
         <div className="flex items-center">
@@ -91,12 +139,28 @@ const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange,
           <Checkbox
             id={node.path}
             checked={!!node.selected}
-            onCheckedChange={(checked) => handleCheckboxChange(node.path, Boolean(checked))}
+            onCheckedChange={(checked) =>
+              handleCheckboxChange(node.path, Boolean(checked))
+            }
             disabled={isLoading}
           />
           <label htmlFor={node.path} className="ml-2 truncate">
-            {node.path === '' ? '/' : `${node.name.split(' (')[0]}`}
+            {node.path === "" ? "/" : `${node.name.split(" (")[0]}`}
           </label>
+          {node.scrapeUrlId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFetchContent(node.scrapeUrlId!)}
+              className="ml-2"
+            >
+              {contentMap[node.scrapeUrlId!] === undefined
+                ? "Fetch Content"
+                : visibleContent[node.scrapeUrlId!]
+                ? "Hide Content"
+                : "Show Content"}
+            </Button>
+          )}
         </div>
         {node.status && (
           <span className={`ml-2 ${getStatusColor(node.status)}`}>
@@ -104,6 +168,15 @@ const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange,
           </span>
         )}
       </div>
+      {node.scrapeUrlId &&
+        contentMap[node.scrapeUrlId] !== undefined &&
+        visibleContent[node.scrapeUrlId!] && (
+          <div className="ml-6 mt-2 p-2 bg-gray-100 rounded">
+            <pre className="whitespace-pre-wrap">
+              {contentMap[node.scrapeUrlId]}
+            </pre>
+          </div>
+        )}
       {node.children && node.expanded !== false && (
         <div className="ml-4">
           {node.children.map((childNode) => renderTree(childNode, depth + 1))}
@@ -112,7 +185,7 @@ const UrlTree: React.FC<UrlTreeProps> = ({ tree: initialTree, onSelectionChange,
     </div>
   );
 
-  const getSelectedPaths = (node: TreeNode): string[] => {
+  const getSelectedPaths = (node: UrlTreeNode): string[] => {
     let paths: string[] = [];
     if (node.selected) {
       paths.push(node.path);

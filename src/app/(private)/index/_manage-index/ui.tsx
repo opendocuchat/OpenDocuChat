@@ -30,9 +30,8 @@ import {
   ScrapingUrl,
 } from "@/types/database";
 import { useState, useCallback } from "react";
-import UrlTree from "../_docu-scraper/url-tree";
+import UrlTree, { UrlTreeNode } from "../_docu-scraper/url-tree";
 import { fetchScrapingResults } from "../_docu-scraper/actions";
-import { TreeNode } from "../_docu-scraper/actions";
 
 export default function ManageIndex() {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -45,7 +44,7 @@ export default function ManageIndex() {
   >({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScrapingRun | null>(null);
-  const [fileTree, setFileTree] = useState<TreeNode | null>(null);
+  const [fileTree, setFileTree] = useState<UrlTreeNode | null>(null);
   const [isLoadingFileTree, setIsLoadingFileTree] = useState(false);
 
   const showDataSources = async () => {
