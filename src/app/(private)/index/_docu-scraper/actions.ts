@@ -1,0 +1,367 @@
+"use server";
+
+import puppeteer, { Page, Browser } from "puppeteer";
+import { sql } from "@vercel/postgres";
+import { DataSource, DataSourceType, ScrapingStatus } from "@/types/database";
+import { NextResponse } from "next/server";
+
+interface CrawlerSettings {
+  stayOnDomain: boolean;
+  stayOnPath: boolean;
+}
+
+interface ScrapingUrl {
+  id: number;
+  url: string;
+  status: string;
+}
+
+export interface TreeNode {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  children?: TreeNode[];
+  selected: boolean;
+  expanded?: boolean;
+}
+
+async function getOrCreateDataSource(
+  url: string,
+  type: DataSourceType
+): Promise<DataSource> {
+  const existingResult = await sql<DataSource>`
+    SELECT id, name, url, type
+    FROM data_source
+    WHERE url = ${url}
+  `;
+
+  if (existingResult.rows.length > 0) {
+    return existingResult.rows[0];
+  }
+
+  const name = new URL(url).hostname;
+  const newResult = await sql<DataSource>`
+    INSERT INTO data_source (name, url, type)
+    VALUES (${name}, ${url}, ${type})
+    RETURNING id, name, url, type
+  `;
+
+  return newResult.rows[0];
+}
+
+export async function cancelScrapingRun(scrapingRunId: number) {
+  try {
+    await sql`
+        UPDATE scraping_url
+        SET status = ${ScrapingStatus.CANCELLED}
+        WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+      `;
+    return { success: true };
+  } catch (error) {
+    console.error("Error stopping scraper:", error);
+    return { success: false, error: "Failed to stop scraping" };
+  }
+}
+
+async function setupBrowser(): Promise<Browser> {
+  return puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
+    defaultViewport: null,
+  });
+}
+
+async function setupPage(browser: Browser): Promise<Page> {
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  );
+  await page.setJavaScriptEnabled(true);
+  return page;
+}
+
+async function crawlUrlWithRetry(
+  url: string,
+  page: Page,
+  startUrl: string,
+  settings: CrawlerSettings,
+  maxRetries = 3
+): Promise<string[]> {
+  const baseUrl = getBaseUrl(startUrl);
+  const basePath = getBasePath(startUrl);
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}: Navigating to ${url}`);
+
+      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 5000 });
+      await page.waitForSelector("body", { timeout: 5000 });
+      await autoScroll(page);
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+
+      const links = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll("a"))
+          .map((a) => a.href)
+          .filter((href) => href.startsWith("http"));
+      });
+
+      console.log(`Found ${links.length} links on ${url}`);
+
+      const filteredLinks = links.filter((link) => {
+        try {
+          const linkUrl = new URL(link);
+          if (settings.stayOnDomain && linkUrl.hostname !== new URL(baseUrl).hostname) {
+            return false;
+          }
+          if (settings.stayOnPath && !linkUrl.pathname.startsWith(basePath)) {
+            return false;
+          }
+          return true;
+        } catch (error) {
+          console.error(`Invalid URL: ${link}`);
+          return false;
+        }
+      });
+
+      console.log(`${filteredLinks.length} links match the crawler settings`);
+
+      return filteredLinks;
+    } catch (error) {
+      console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
+      if (attempt === maxRetries) {
+        console.error(`Max retries reached for ${url}`);
+        return [];
+      }
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+    }
+  }
+  return [];
+}
+
+async function isScrapingCancelled(scrapingRunId: number): Promise<boolean> {
+  const result = await sql`
+    SELECT COUNT(*) as count
+    FROM scraping_url
+    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.CANCELLED}
+  `;
+  return result.rows[0].count > 0;
+}
+
+async function autoScroll(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let totalHeight = 0;
+      const distance = 100;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+
+        if (totalHeight >= scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+}
+
+function getBaseUrl(url: string): string {
+  const parsedUrl = new URL(url);
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+}
+
+function getBasePath(url: string): string {
+  const parsedUrl = new URL(url);
+  return parsedUrl.pathname.split('/').slice(0, 2).join('/');
+}
+
+async function scrapeUrls(scrapingRunId: number, startUrl: string, settings: CrawlerSettings) {
+  console.log(
+    `Starting scrape for run ${scrapingRunId} with start URL: ${startUrl}`
+  );
+  const browser = await setupBrowser();
+  const page = await setupPage(browser);
+
+  try {
+    while (true) {
+
+      const isCancelled = await isScrapingCancelled(scrapingRunId);
+      if (isCancelled) {
+        console.log(`Scraping run ${scrapingRunId} has been cancelled`);
+        await cancelScrapingRun(scrapingRunId);
+        break;
+      }
+
+      const nextUrl = await getNextUrlToCrawl(scrapingRunId);
+      if (!nextUrl) {
+        console.log(`No more URLs to crawl for run ${scrapingRunId}`);
+        break;
+      }
+      await updateUrlStatus(nextUrl.id, ScrapingStatus.PROCESSING);
+      const discoveredUrls = await crawlUrlWithRetry(nextUrl.url, page, startUrl, settings);
+
+      await Promise.all([
+        parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
+        updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
+      ]);
+    }
+  } catch (error) {
+    console.error("Crawling failed:", error);
+  } finally {
+    await browser.close();
+  }
+}
+
+async function parallelAddUrlsToScrape(scrapingRunId: number, urls: string[]) {
+  const addUrlPromises = urls.map(url => addUrlToScrape(scrapingRunId, url));
+  await Promise.all(addUrlPromises);
+}
+
+
+export async function startDocuScraper(startUrl: string, settings: CrawlerSettings) {
+  if (!startUrl) {
+    throw new Error("Invalid input");
+  }
+  console.log(`Starting scraper with start URL: ${startUrl}`);
+
+  try {
+    const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
+    await addUrlToScrape(scrapingRunId, startUrl)
+
+    // Start the scraping process asynchronously
+    scrapeUrls(scrapingRunId, startUrl, settings).catch(console.error);
+
+    // Return a plain object with the scrapingRunId
+    return { success: true, scrapingRunId, dataSourceId };
+  } catch (error) {
+    console.error("Error starting scraper:", error);
+    return { success: false, error: "Failed to start scraping" };
+  }
+}
+
+async function createScrapingRun(url: string) {
+  try {
+    const dataSource = await getOrCreateDataSource(url, "docu_scrape");
+    const result = await sql`
+      INSERT INTO scraping_run (data_source_id)
+      VALUES (${dataSource.id})
+      RETURNING id
+    `;
+    console.log(`Scraping run created with ID: ${result.rows[0].id}`);
+    return { scrapingRunId: result.rows[0].id, dataSourceId: dataSource.id };
+  } catch (e) {
+    console.error("Error creating scraping run:", e);
+    throw e;
+  }
+}
+
+async function addUrlToScrape(scrapingRunId: number, url: string) {
+  const existingUrl = await sql`
+      SELECT id FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId} AND url = ${url}
+    `;
+
+  if (existingUrl.rows.length === 0) {
+    console.log(`New URL added to scrape: ${url}`);
+    await sql`
+        INSERT INTO scraping_url (scraping_run_id, url, status)
+        VALUES (${scrapingRunId}, ${url}, ${ScrapingStatus.QUEUED})
+      `;
+  } else {
+    console.log(`Existing URL already in db: ${url}`);
+  }
+}
+
+async function getNextUrlToCrawl(
+  scrapingRunId: number
+): Promise<ScrapingUrl | null> {
+  const result = await sql<ScrapingUrl>`
+      SELECT id, url, status
+      FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+      ORDER BY id ASC
+      LIMIT 1
+    `;
+
+  return result.rows[0] || null;
+}
+
+async function updateUrlStatus(id: number, status: ScrapingStatus) {
+  await sql`
+      UPDATE scraping_url
+      SET status = ${status}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+    `;
+}
+
+export async function fetchScrapingResults(
+  scrapingRunId: number
+): Promise<TreeNode> {
+  const result = await sql<ScrapingUrl>`
+      SELECT id, url, status
+      FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId}
+    `;
+
+  const urls = result.rows;
+  const root: TreeNode = {
+    name: "Root",
+    path: "/",
+    type: "directory",
+    children: [],
+    selected: false,
+    expanded: true,
+  };
+
+  urls.forEach(({ url, status }) => {
+    const parsedUrl = new URL(url);
+    const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+
+    let currentNode = root;
+    pathParts.forEach((part, index) => {
+      const isLastPart = index === pathParts.length - 1;
+      const path = "/" + pathParts.slice(0, index + 1).join("/");
+      let childNode = currentNode.children?.find(
+        (child) => child.path === path
+      );
+
+      if (!childNode) {
+        childNode = {
+          name: part,
+          path: path,
+          type: isLastPart ? "file" : "directory",
+          children: isLastPart ? undefined : [],
+          selected: false,
+          expanded: true,
+        };
+        currentNode.children = currentNode.children || [];
+        currentNode.children.push(childNode);
+      }
+
+      if (isLastPart) {
+        childNode.name = `${part} (${status})`;
+      }
+
+      currentNode = childNode;
+    });
+  });
+
+  return root;
+}
+
+export async function isScrapingComplete(
+  scrapingRunId: number
+): Promise<boolean> {
+  const result = await sql`
+      SELECT COUNT(*) as count
+      FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+    `;
+
+  return result.rows[0].count === 0;
+}

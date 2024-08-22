@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
+import { Button } from "../../../../components/ui/button";
+import { Checkbox } from "../../../../components/ui/checkbox";
 
 export interface TreeNode {
   name: string;

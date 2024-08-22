@@ -37,7 +37,13 @@ export interface Citation {
   highlight_end_index: number;
 }
 
-export type ScrapingStatus = 'QUEUED' | 'PROCESSING' | 'CANCELLED' | 'COMPLETED' | 'FAILED';
+export enum ScrapingStatus {
+  QUEUED = 'QUEUED',
+  PROCESSING = 'PROCESSING',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED'
+}
 
 export interface ScrapingUrl {
   id: number;
