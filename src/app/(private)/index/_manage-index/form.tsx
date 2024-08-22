@@ -30,7 +30,7 @@ import {
   ScrapingUrl,
 } from "@/types/database";
 import { useState, useCallback } from "react";
-import FileTree from "../_docu-scraper/file-tree";
+import UrlTree from "../_docu-scraper/url-tree";
 import { fetchScrapingResults } from "../_docu-scraper/actions";
 import { TreeNode } from "../_docu-scraper/actions";
 
@@ -176,7 +176,7 @@ export default function ManageIndex() {
                                 <Loader2 className="h-8 w-8 animate-spin" />
                               </div>
                             ) : (
-                              <FileTree
+                              <UrlTree
                                 tree={fileTree!}
                                 onSelectionChange={() => {}}
                                 isLoading={isLoadingFileTree}

@@ -13,7 +13,7 @@ import {
   cancelScrapingRun,
 } from "./actions";
 import { TreeNode } from "./actions";
-import FileTree from "./file-tree";
+import UrlTree from "./url-tree";
 
 export default function DocuScraper() {
   const [url, setUrl] = useState("");
@@ -196,7 +196,7 @@ export default function DocuScraper() {
                     Cancel Scraping Run
                   </Button>
                 )}
-                <FileTree
+                <UrlTree
                   tree={treeData}
                   onSelectionChange={handleSelectionChange}
                   isLoading={isLoading}
