@@ -119,6 +119,10 @@ export default function DocuScraper() {
     // TODO handle selection for indexing
   };
 
+  const handleIndexSelectedUrls = () => {
+    // TODO handle indexing
+  };
+
   return (
     <div>
       <Card className="my-4">
@@ -149,7 +153,7 @@ export default function DocuScraper() {
 
           <Card className="mb-4">
             <CardHeader>
-              <CardTitle>Documentation URL</CardTitle>
+              <CardTitle>Start Docu Scraper</CardTitle>
             </CardHeader>
             <CardContent>
               <form
@@ -168,8 +172,8 @@ export default function DocuScraper() {
                 </Button>
               </form>
 
-              <div>
-                <Label>Crawl Settings</Label>
+              <div className="mt-4">
+                <div className="font-semibold">Crawl Settings</div>
                 <div className="flex items-center space-x-2 py-1">
                   <Checkbox
                     id="stayOnDomain"
@@ -212,39 +216,6 @@ export default function DocuScraper() {
                 </div>
               </div>
 
-              {/* <div className="mt-4">
-                <Label>Crawl Settings</Label>
-                <div className="flex items-center space-x-2 py-1">
-                  <Checkbox
-                    id="stayOnDomain"
-                    checked={crawlSettings.stayOnDomain}
-                    onCheckedChange={(checked) => {
-                      setCrawlSettings({
-                        ...crawlSettings,
-                        stayOnDomain: checked as boolean,
-                      });
-                    }}
-                  />
-                  <Label htmlFor="stayOnDomain">
-                    Stay on domain & subdomain
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 py-1">
-                  <Checkbox
-                    id="stayOnPath"
-                    checked={crawlSettings.stayOnPath}
-                    onCheckedChange={(checked) => {
-                      setCrawlSettings({
-                        ...crawlSettings,
-                        stayOnPath: checked as boolean,
-                      });
-                    }}
-                  />
-                  <Label htmlFor="stayOnPath">Stay on path</Label>
-                </div> */}
-
-              {/* </div> */}
-
               {error && <p className="text-red-500 mt-2">{error}</p>}
             </CardContent>
           </Card>
@@ -252,10 +223,14 @@ export default function DocuScraper() {
           {treeData && (
             <Card>
               <CardHeader>
-                <CardTitle>Discovered URLs</CardTitle>
+                <CardTitle>Select URLs for indexing</CardTitle>
                 {isLoading && <p>Discovering URLs... Please wait.</p>}
               </CardHeader>
               <CardContent>
+                <Button onClick={handleIndexSelectedUrls}>
+                  Add selected URLs to Index
+                </Button>
+
                 {isLoading && (
                   <Button onClick={handleCancelScrapingRun} className="mb-4">
                     Cancel Scraping Run

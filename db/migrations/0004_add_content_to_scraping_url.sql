@@ -1,0 +1,1 @@
+ALTER TABLE scraping_url ADD COLUMN content TEXT
