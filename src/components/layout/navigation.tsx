@@ -23,7 +23,7 @@ export function Navigation() {
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/index" legacyBehavior passHref>
+            <Link href="/manage-index" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 Manage Index
               </NavigationMenuLink>

@@ -8,7 +8,6 @@ import {
   ScrapingStatus,
   ScrapingUrl,
 } from "@/types/database";
-import { NextResponse } from "next/server";
 import { UrlTreeNode } from "./url-tree";
 
 interface CrawlerSettings {
@@ -342,19 +341,17 @@ async function scrapeUrlsBatch(
       const processingCount = await getProcessingUrlsCount(scrapingRunId);
       if (processingCount >= MAX_CONCURRENT_PROCESSING) {
         console.log(
-          `Max concurrent processing reached. Waiting before next attempt.`
+          `Max concurrent processing reached. Stopping this scraper.`
         );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
+        return;
       }
 
       const nextUrl = await getNextUrlToCrawl(scrapingRunId);
       if (!nextUrl) {
         console.log(
-          `No more URLs to crawl for run ${scrapingRunId}. Waiting before next attempt.`
+          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
         );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
+        return;
       }
 
       if (processingCount < MAX_CONCURRENT_PROCESSING - 1) {
