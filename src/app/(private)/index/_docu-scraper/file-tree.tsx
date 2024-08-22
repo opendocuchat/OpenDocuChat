@@ -44,9 +44,9 @@ const FileTree: React.FC<FileTreeProps> = ({ tree, onSelectionChange, isLoading 
             {node.name.split(' (')[0]}
           </label>
         </div>
-        {node.type === 'file' && (
-          <span className={`ml-2 ${getStatusColor(node.name.split('(')[1].replace(')', '') as ScrapingStatus)}`}>
-            {node.name.split('(')[1].replace(')', '')}
+        {node.status && (
+          <span className={`ml-2 ${getStatusColor(node.status)}`}>
+            {node.status}
           </span>
         )}
       </div>
@@ -75,66 +75,3 @@ const FileTree: React.FC<FileTreeProps> = ({ tree, onSelectionChange, isLoading 
 };
 
 export default FileTree;
-
-
-
-
-
-
-// import React from "react";
-// import { TreeNode } from "./actions";
-// import { Checkbox } from "@/components/ui/checkbox";
-
-// interface FileTreeProps {
-//   tree: TreeNode;
-//   onSelectionChange: (selectedPaths: string[]) => void;
-// }
-
-// const FileTree: React.FC<FileTreeProps> = ({ tree, onSelectionChange }) => {
-  
-//     const handleCheckboxChange = (node: TreeNode, checked: boolean) => {
-//     node.selected = checked;
-//     if (node.children) {
-//       node.children.forEach((child) => handleCheckboxChange(child, checked));
-//     }
-//     const selectedPaths = getSelectedPaths(tree);
-//     onSelectionChange(selectedPaths);
-//   };
-  
-//   const renderTree = (node: TreeNode) => (
-//     <div key={node.path} className="ml-4">
-//       <div className="flex items-center">
-//         <Checkbox
-//           id={node.path}
-//           checked={!!node.selected}
-//           onCheckedChange={(checked) => handleCheckboxChange(node, Boolean(checked))}
-//         />
-//         <label htmlFor={node.path} className="ml-2">
-//           {node.name}
-//         </label>
-//       </div>
-//       {node.children && node.expanded && (
-//         <div className="ml-4">
-//           {node.children.map((childNode) => renderTree(childNode))}
-//         </div>
-//       )}
-//     </div>
-//   );
-
-//   const getSelectedPaths = (node: TreeNode): string[] => {
-//     let paths: string[] = [];
-//     if (node.selected) {
-//       paths.push(node.path);
-//     }
-//     if (node.children) {
-//       node.children.forEach((child) => {
-//         paths = [...paths, ...getSelectedPaths(child)];
-//       });
-//     }
-//     return paths;
-//   };
-
-//   return renderTree(tree);
-// };
-
-// export default FileTree;

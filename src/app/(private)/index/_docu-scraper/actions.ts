@@ -23,6 +23,7 @@ export interface TreeNode {
   children?: TreeNode[];
   selected: boolean;
   expanded?: boolean;
+  status?: ScrapingStatus;
 }
 
 async function getOrCreateDataSource(
@@ -84,6 +85,31 @@ async function setupPage(browser: Browser): Promise<Page> {
   return page;
 }
 
+function isIndexableUrl(
+  url: string,
+  baseUrl: string,
+  basePath: string,
+  settings: CrawlerSettings
+): boolean {
+  try {
+    const linkUrl = new URL(url);
+    const baseUrlObj = new URL(baseUrl);
+
+    if (settings.stayOnDomain && linkUrl.hostname !== baseUrlObj.hostname) {
+      return false;
+    }
+
+    if (settings.stayOnPath && !linkUrl.pathname.startsWith(basePath)) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Invalid URL: ${url}`);
+    return false;
+  }
+}
+
 async function crawlUrlWithRetry(
   url: string,
   page: Page,
@@ -109,27 +135,21 @@ async function crawlUrlWithRetry(
           .filter((href) => href.startsWith("http"));
       });
 
-      console.log(`Found ${links.length} links on ${url}`);
+      const uniqueLinks = Array.from(new Set(links));
 
-      const filteredLinks = links.filter((link) => {
-        try {
-          const linkUrl = new URL(link);
-          if (settings.stayOnDomain && linkUrl.hostname !== new URL(baseUrl).hostname) {
-            return false;
-          }
-          if (settings.stayOnPath && !linkUrl.pathname.startsWith(basePath)) {
-            return false;
-          }
-          return true;
-        } catch (error) {
-          console.error(`Invalid URL: ${link}`);
-          return false;
-        }
-      });
+      console.log(`Found ${uniqueLinks.length} unique links on ${url}`);
 
-      console.log(`${filteredLinks.length} links match the crawler settings`);
+      const indexableLinks = uniqueLinks
+        .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
+        .map((link) => {
+          const url = new URL(link);
+          url.hash = ""; // Remove fragment
+          return url.toString();
+        });
 
-      return filteredLinks;
+      console.log(`${indexableLinks.length} indexable links found`);
+
+      return indexableLinks;
     } catch (error) {
       console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
       if (attempt === maxRetries) {
@@ -177,10 +197,14 @@ function getBaseUrl(url: string): string {
 
 function getBasePath(url: string): string {
   const parsedUrl = new URL(url);
-  return parsedUrl.pathname.split('/').slice(0, 2).join('/');
+  return parsedUrl.pathname.split("/").slice(0, 2).join("/");
 }
 
-async function scrapeUrls(scrapingRunId: number, startUrl: string, settings: CrawlerSettings) {
+async function scrapeUrls(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
   console.log(
     `Starting scrape for run ${scrapingRunId} with start URL: ${startUrl}`
   );
@@ -189,7 +213,6 @@ async function scrapeUrls(scrapingRunId: number, startUrl: string, settings: Cra
 
   try {
     while (true) {
-
       const isCancelled = await isScrapingCancelled(scrapingRunId);
       if (isCancelled) {
         console.log(`Scraping run ${scrapingRunId} has been cancelled`);
@@ -203,7 +226,12 @@ async function scrapeUrls(scrapingRunId: number, startUrl: string, settings: Cra
         break;
       }
       await updateUrlStatus(nextUrl.id, ScrapingStatus.PROCESSING);
-      const discoveredUrls = await crawlUrlWithRetry(nextUrl.url, page, startUrl, settings);
+      const discoveredUrls = await crawlUrlWithRetry(
+        nextUrl.url,
+        page,
+        startUrl,
+        settings
+      );
 
       await Promise.all([
         parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
@@ -218,12 +246,14 @@ async function scrapeUrls(scrapingRunId: number, startUrl: string, settings: Cra
 }
 
 async function parallelAddUrlsToScrape(scrapingRunId: number, urls: string[]) {
-  const addUrlPromises = urls.map(url => addUrlToScrape(scrapingRunId, url));
+  const addUrlPromises = urls.map((url) => addUrlToScrape(scrapingRunId, url));
   await Promise.all(addUrlPromises);
 }
 
-
-export async function startDocuScraper(startUrl: string, settings: CrawlerSettings) {
+export async function startDocuScraper(
+  startUrl: string,
+  settings: CrawlerSettings
+) {
   if (!startUrl) {
     throw new Error("Invalid input");
   }
@@ -231,7 +261,7 @@ export async function startDocuScraper(startUrl: string, settings: CrawlerSettin
 
   try {
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
-    await addUrlToScrape(scrapingRunId, startUrl)
+    await addUrlToScrape(scrapingRunId, startUrl);
 
     // Start the scraping process asynchronously
     scrapeUrls(scrapingRunId, startUrl, settings).catch(console.error);
@@ -309,8 +339,24 @@ export async function fetchScrapingResults(
     `;
 
   const urls = result.rows;
+  console.log("number of urls from db:", urls.length);
+
+  if (urls.length === 0) {
+    return {
+      name: "No URLs discovered",
+      path: "/",
+      type: "directory",
+      children: [],
+      selected: false,
+      expanded: true,
+    };
+  }
+
+  // Get the base URL from the first URL in the result
+  const baseUrl = new URL(urls[0].url).origin;
+
   const root: TreeNode = {
-    name: "Root",
+    name: baseUrl,
     path: "/",
     type: "directory",
     children: [],
@@ -338,13 +384,12 @@ export async function fetchScrapingResults(
           children: isLastPart ? undefined : [],
           selected: false,
           expanded: true,
+          status: isLastPart ? (status as ScrapingStatus) : undefined,
         };
         currentNode.children = currentNode.children || [];
         currentNode.children.push(childNode);
-      }
-
-      if (isLastPart) {
-        childNode.name = `${part} (${status})`;
+      } else if (isLastPart) {
+        childNode.status = status as ScrapingStatus;
       }
 
       currentNode = childNode;

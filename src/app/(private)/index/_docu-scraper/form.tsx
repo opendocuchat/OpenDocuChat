@@ -59,7 +59,6 @@ export default function DocuScraper() {
 
       const complete = await isScrapingComplete(scrapingRunId);
       if (complete) {
-        console.log("Scraping complete");
         setIsLoading(false);
       }
     } catch (err) {
@@ -98,6 +97,7 @@ export default function DocuScraper() {
 
   const handleSelectionChange = (selectedPaths: string[]) => {
     console.log("Selected paths:", selectedPaths);
+    // TODO handle selection for indexing
   };
 
   return (

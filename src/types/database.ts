@@ -18,7 +18,10 @@ export interface Document {
   created_at: Date;
 }
 
-export type MessageSender = "USER" | "BOT";
+export enum MessageSender {
+  USER = "USER",
+  ASSISTANT = "ASSISTANT",
+}
 
 export interface Message {
   id: number;

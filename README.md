@@ -37,9 +37,13 @@ graph TD
 
 **Indexing**
 - [ ] Public Repo
+- - [X] Analyze repo size and projected embedding costs
 - - [ ] Index all
 - - [ ] Index subset (include/exclude logic)
-- [ ] Scrape Docu Website
+- [ ] Scrape Documentation Website
+- - [X] Discover URLs to index
+- - [X] Basic crawler settings (stay on domain, subdomain, path)
+- - [ ] Add fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
 
 **Querying**
 - [ ] Boost certain files/folders
