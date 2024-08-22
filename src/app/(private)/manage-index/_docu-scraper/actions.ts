@@ -401,9 +401,6 @@ async function scrapeUrlsBatch(
   } finally {
     await browser.close();
   }
-
-  console.log("Current batch completed. Triggering next batch.");
-  scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
 }
 
 async function createScrapingRun(url: string) {
