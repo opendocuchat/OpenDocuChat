@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 interface CrawlerSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
+  excludeFileTypes: string[];
 }
 
 interface ScrapingUrl {
@@ -91,9 +92,17 @@ function isIndexableUrl(
   basePath: string,
   settings: CrawlerSettings
 ): boolean {
+  console.log("settings", settings);
   try {
     const linkUrl = new URL(url);
     const baseUrlObj = new URL(baseUrl);
+
+    if (settings.excludeFileTypes && settings.excludeFileTypes.length > 0) {
+      const extension = linkUrl.pathname.split(".").pop()?.toLowerCase();
+      if (extension && settings.excludeFileTypes.includes(extension)) {
+        return false;
+      }
+    }
 
     if (settings.stayOnDomain && linkUrl.hostname !== baseUrlObj.hostname) {
       return false;
@@ -124,8 +133,8 @@ async function crawlUrlWithRetry(
     try {
       console.log(`Attempt ${attempt}: Navigating to ${url}`);
 
-      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 5000 });
-      await page.waitForSelector("body", { timeout: 5000 });
+      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 10000 });
+      await page.waitForSelector("body", { timeout: 10000 });
       await autoScroll(page);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
 

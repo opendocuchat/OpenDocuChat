@@ -20,11 +20,30 @@ export default function DocuScraper() {
   const [crawlSettings, setCrawlSettings] = useState({
     stayOnDomain: true,
     stayOnPath: true,
+    excludeFileTypes: ["jpg", "jpeg", "png", "gif", "mov", "mp4", "mp3"],
   });
   const [scrapingRunId, setScrapingRunId] = useState<number | null>(null);
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [excludeFileTypesInput, setExcludeFileTypesInput] = useState(
+    crawlSettings.excludeFileTypes.join(", ")
+  );
+
+  const handleExcludeFileTypesChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const input = e.target.value;
+    setExcludeFileTypesInput(input);
+    const fileTypes = input
+      .split(",")
+      .map((type) => type.trim().toLowerCase())
+      .filter(Boolean);
+    setCrawlSettings((prevSettings) => ({
+      ...prevSettings,
+      excludeFileTypes: fileTypes,
+    }));
+  };
 
   const discoverUrls = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +168,7 @@ export default function DocuScraper() {
                 </Button>
               </form>
 
-              <div className="mt-4">
+              <div>
                 <Label>Crawl Settings</Label>
                 <div className="flex items-center space-x-2 py-1">
                   <Checkbox
@@ -179,7 +198,53 @@ export default function DocuScraper() {
                   />
                   <Label htmlFor="stayOnPath">Stay on path</Label>
                 </div>
+                <div>
+                  <Label htmlFor="excludeFileTypes">
+                    Exclude File Types (comma-separated)
+                  </Label>
+                  <Input
+                    id="excludeFileTypes"
+                    value={excludeFileTypesInput}
+                    onChange={handleExcludeFileTypesChange}
+                    placeholder="e.g., jpg, png, gif"
+                    className="mt-1"
+                  />
+                </div>
               </div>
+
+              {/* <div className="mt-4">
+                <Label>Crawl Settings</Label>
+                <div className="flex items-center space-x-2 py-1">
+                  <Checkbox
+                    id="stayOnDomain"
+                    checked={crawlSettings.stayOnDomain}
+                    onCheckedChange={(checked) => {
+                      setCrawlSettings({
+                        ...crawlSettings,
+                        stayOnDomain: checked as boolean,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="stayOnDomain">
+                    Stay on domain & subdomain
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 py-1">
+                  <Checkbox
+                    id="stayOnPath"
+                    checked={crawlSettings.stayOnPath}
+                    onCheckedChange={(checked) => {
+                      setCrawlSettings({
+                        ...crawlSettings,
+                        stayOnPath: checked as boolean,
+                      });
+                    }}
+                  />
+                  <Label htmlFor="stayOnPath">Stay on path</Label>
+                </div> */}
+
+              {/* </div> */}
+
               {error && <p className="text-red-500 mt-2">{error}</p>}
             </CardContent>
           </Card>
