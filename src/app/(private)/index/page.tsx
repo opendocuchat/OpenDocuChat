@@ -1,6 +1,6 @@
-import GitHubRepoIndexing from "./_github-repo/form";
-import DocuScraper from "./_docu-scraper/form";
-import ManageIndex from "./_manage-index/form";
+import GitHubRepoIndexing from "./_github-repo/ui";
+import DocuScraper from "./_docu-scraper/ui";
+import ManageIndex from "./_manage-index/ui";
 
 export default function ManageIndexPage() {
   return (

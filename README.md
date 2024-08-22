@@ -43,7 +43,9 @@ graph TD
 - [ ] Scrape Documentation Website
 - - [X] Discover URLs to index
 - - [X] Basic crawler settings (stay on domain, subdomain, path)
-- - [ ] Add fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
+- - [ ] Viewer for scraped page contents
+- - [ ] Add selected URLs to index
+- - [ ] Fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
 
 **Querying**
 - [ ] Boost certain files/folders

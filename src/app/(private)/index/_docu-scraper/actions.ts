@@ -2,19 +2,18 @@
 
 import puppeteer, { Page, Browser } from "puppeteer";
 import { sql } from "@vercel/postgres";
-import { DataSource, DataSourceType, ScrapingStatus } from "@/types/database";
+import {
+  DataSource,
+  DataSourceType,
+  ScrapingStatus,
+  ScrapingUrl,
+} from "@/types/database";
 import { NextResponse } from "next/server";
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
   excludeFileTypes: string[];
-}
-
-interface ScrapingUrl {
-  id: number;
-  url: string;
-  status: string;
 }
 
 export interface TreeNode {
@@ -125,7 +124,7 @@ async function crawlUrlWithRetry(
   startUrl: string,
   settings: CrawlerSettings,
   maxRetries = 3
-): Promise<string[]> {
+): Promise<{ links: string[]; content: string }> {
   const baseUrl = getBaseUrl(startUrl);
   const basePath = getBasePath(startUrl);
 
@@ -138,10 +137,34 @@ async function crawlUrlWithRetry(
       await autoScroll(page);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
 
-      const links = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll("a"))
+      const { links, content } = await page.evaluate(() => {
+        // Extract links
+        const links = Array.from(document.querySelectorAll("a"))
           .map((a) => a.href)
           .filter((href) => href.startsWith("http"));
+
+        // Extract visible text content
+        const extractVisibleText = (node: Node): string => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return node.textContent?.trim() || "";
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return "";
+          }
+          const element = node as Element;
+          const style = window.getComputedStyle(element);
+          if (style.display === "none" || style.visibility === "hidden") {
+            return "";
+          }
+          return Array.from(element.childNodes)
+            .map(extractVisibleText)
+            .join(" ")
+            .trim();
+        };
+
+        const content = extractVisibleText(document.body);
+
+        return { links, content };
       });
 
       const uniqueLinks = Array.from(new Set(links));
@@ -152,23 +175,23 @@ async function crawlUrlWithRetry(
         .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
         .map((link) => {
           const url = new URL(link);
-          url.hash = ""; // Remove fragment
+          url.hash = "";
           return url.toString();
         });
 
       console.log(`${indexableLinks.length} indexable links found`);
 
-      return indexableLinks;
+      return { links: indexableLinks, content };
     } catch (error) {
       console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
       if (attempt === maxRetries) {
         console.error(`Max retries reached for ${url}`);
-        return [];
+        return { links: [], content: "" };
       }
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
     }
   }
-  return [];
+  return { links: [], content: "" };
 }
 
 async function isScrapingCancelled(scrapingRunId: number): Promise<boolean> {
@@ -235,7 +258,7 @@ async function scrapeUrls(
         break;
       }
       await updateUrlStatus(nextUrl.id, ScrapingStatus.PROCESSING);
-      const discoveredUrls = await crawlUrlWithRetry(
+      const { links: discoveredUrls, content } = await crawlUrlWithRetry(
         nextUrl.url,
         page,
         startUrl,
@@ -245,6 +268,7 @@ async function scrapeUrls(
       await Promise.all([
         parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
         updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
+        saveScrapedContent(nextUrl.id, content),
       ]);
     }
   } catch (error) {
@@ -252,6 +276,14 @@ async function scrapeUrls(
   } finally {
     await browser.close();
   }
+}
+
+async function saveScrapedContent(urlId: number, content: string) {
+  await sql`
+    UPDATE scraping_url
+    SET content = ${content}
+    WHERE id = ${urlId}
+  `;
 }
 
 async function parallelAddUrlsToScrape(scrapingRunId: number, urls: string[]) {
@@ -272,10 +304,8 @@ export async function startDocuScraper(
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    // Start the scraping process asynchronously
     scrapeUrls(scrapingRunId, startUrl, settings).catch(console.error);
 
-    // Return a plain object with the scrapingRunId
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
     console.error("Error starting scraper:", error);
@@ -361,7 +391,6 @@ export async function fetchScrapingResults(
     };
   }
 
-  // Get the base URL from the first URL in the result
   const baseUrl = new URL(urls[0].url).origin;
 
   const root: TreeNode = {

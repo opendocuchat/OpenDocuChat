@@ -147,18 +147,21 @@ export default function ManageIndex() {
                         </Button>
                       </SheetTrigger>
                       <SheetContent
-                        className={`w-[400px] sm:w-[540px] overflow-y-auto`}
+                        className={`max-w-4/5 sm:max-w-4/5 overflow-y-auto`}
                       >
                         <SheetHeader>
-                        <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between">
                             <SheetTitle>{dataSource.name} Details</SheetTitle>
                             {selectedRun && (
-                              <Button variant="outline" onClick={handleBackClick}>
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Runs
+                              <Button
+                                variant="outline"
+                                onClick={handleBackClick}
+                              >
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to
+                                Runs
                               </Button>
                             )}
                           </div>
-                          {/* <SheetTitle>{dataSource.name} Details</SheetTitle> */}
                           <SheetDescription>
                             {dataSource.type === "docu_scrape"
                               ? "Scraping Runs"
