@@ -15,16 +15,15 @@ import {} from "@vercel/blob";
 
 async function setupBrowser(): Promise<Browser> {
   console.log("Setting up browser...");
+  chromium.setGraphicsMode = false
+
   try {
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(
-        "https://aqpdvnrua2f6oqww.public.blob.vercel-storage.com/chromium-v127.0.0-pack-uaPJmN9v8R49eS10SNpev9xRI0Yqaz.tar"
+        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
       ),
-      //   executablePath: await chromium.executablePath(
-      //     "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
-      //   ),
       headless: chromium.headless,
     });
 
@@ -552,8 +551,6 @@ export async function fetchScrapingResultsAndStatus(
       url.status === ScrapingStatus.PROCESSING
   ).length;
   const isComplete = incompleteCount === 0;
-
-  console.log("is complete", isComplete);
 
   return { treeData: root, isComplete };
 }
