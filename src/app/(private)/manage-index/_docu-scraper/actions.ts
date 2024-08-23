@@ -1,7 +1,7 @@
 "use server";
 
 // import puppeteer, { Page, Browser } from "puppeteer";
-import { sql, db, VercelPoolClient } from '@vercel/postgres';
+import { sql, db, VercelPoolClient } from "@vercel/postgres";
 import {
   DataSource,
   DataSourceType,
@@ -11,10 +11,16 @@ import {
 import { UrlTreeNode } from "./url-tree";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
+import { put } from "@vercel/blob";
 
 async function setupBrowser(): Promise<Browser> {
+  const executablePathValue = await chromium.executablePath();
+  const blob = await put("chromium-executable", executablePathValue, {
+    access: "public",
+  });
+
   const browser = await puppeteer.launch({
-    executablePath: await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"),
+    executablePath: blob.url,
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
     headless: chromium.headless,
@@ -229,15 +235,23 @@ function getBasePath(url: string): string {
   return parsedUrl.pathname.split("/").slice(0, 2).join("/");
 }
 
-async function saveScrapedContent(client: VercelPoolClient, urlId: number, content: string) {
-    await client.sql`
+async function saveScrapedContent(
+  client: VercelPoolClient,
+  urlId: number,
+  content: string
+) {
+  await client.sql`
       UPDATE scraping_url
       SET content = ${content}
       WHERE id = ${urlId}
     `;
-  }
+}
 
-async function addUrlsToScrape(client: VercelPoolClient, scrapingRunId: number, urls: string[]) {
+async function addUrlsToScrape(
+  client: VercelPoolClient,
+  scrapingRunId: number,
+  urls: string[]
+) {
   const addUrlPromises = urls.map(async (url) => {
     const existingUrl = await client.sql`
       SELECT id FROM scraping_url
@@ -278,9 +292,11 @@ export async function startDocuScraper(
   }
 }
 
-
-
-async function scrapeUrlsBatch(scrapingRunId: number, startUrl: string, settings: CrawlerSettings) {
+async function scrapeUrlsBatch(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
   const pgClient = await db.connect();
   const browser = await setupBrowser();
   const page = await setupPage(browser);
@@ -292,20 +308,29 @@ async function scrapeUrlsBatch(scrapingRunId: number, startUrl: string, settings
     while (Date.now() - startTime < timeoutDuration) {
       const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
       if (isCancelled) {
-        console.log(`Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`);
+        console.log(
+          `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
+        );
         await cancelScrapingRun(scrapingRunId);
         return;
       }
 
-      const processingCount = await getProcessingUrlsCount(pgClient, scrapingRunId);
+      const processingCount = await getProcessingUrlsCount(
+        pgClient,
+        scrapingRunId
+      );
       if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-        console.log(`Max concurrent processing reached. Stopping this scraper.`);
+        console.log(
+          `Max concurrent processing reached. Stopping this scraper.`
+        );
         return;
       }
 
       const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
       if (!nextUrl) {
-        console.log(`No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`);
+        console.log(
+          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
+        );
         return;
       }
 
@@ -335,7 +360,10 @@ async function scrapeUrlsBatch(scrapingRunId: number, startUrl: string, settings
   }
 }
 
-async function checkIfCancelled(client: VercelPoolClient, scrapingRunId: number): Promise<boolean> {
+async function checkIfCancelled(
+  client: VercelPoolClient,
+  scrapingRunId: number
+): Promise<boolean> {
   const result = await client.sql`
     SELECT COUNT(*) as count
     FROM scraping_url
@@ -344,7 +372,10 @@ async function checkIfCancelled(client: VercelPoolClient, scrapingRunId: number)
   return result.rows[0].count > 0;
 }
 
-async function getProcessingUrlsCount(client: VercelPoolClient, scrapingRunId: number): Promise<number> {
+async function getProcessingUrlsCount(
+  client: VercelPoolClient,
+  scrapingRunId: number
+): Promise<number> {
   const result = await client.sql`
     SELECT COUNT(*) as count
     FROM scraping_url
@@ -353,7 +384,10 @@ async function getProcessingUrlsCount(client: VercelPoolClient, scrapingRunId: n
   return result.rows[0].count;
 }
 
-async function getNextUrlToCrawl(client: VercelPoolClient, scrapingRunId: number): Promise<ScrapingUrl | null> {
+async function getNextUrlToCrawl(
+  client: VercelPoolClient,
+  scrapingRunId: number
+): Promise<ScrapingUrl | null> {
   const result = await client.sql<ScrapingUrl>`
     WITH next_url AS (
       SELECT id, url, status
@@ -403,7 +437,11 @@ async function addUrlToScrape(scrapingRunId: number, url: string) {
   }
 }
 
-async function updateUrlStatus(client: VercelPoolClient,id: number, status: ScrapingStatus) {
+async function updateUrlStatus(
+  client: VercelPoolClient,
+  id: number,
+  status: ScrapingStatus
+) {
   await client.sql`
       UPDATE scraping_url
       SET status = ${status}, updated_at = CURRENT_TIMESTAMP
@@ -498,8 +536,10 @@ export async function fetchScrapingResultsAndStatus(
   });
 
   // Count the number of QUEUED status
-  const incompleteCount = urls.filter(url => 
-    url.status === ScrapingStatus.QUEUED || url.status === ScrapingStatus.PROCESSING
+  const incompleteCount = urls.filter(
+    (url) =>
+      url.status === ScrapingStatus.QUEUED ||
+      url.status === ScrapingStatus.PROCESSING
   ).length;
   const isComplete = incompleteCount === 0;
 
