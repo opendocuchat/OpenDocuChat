@@ -11,11 +11,9 @@ import {
 import { UrlTreeNode } from "./url-tree";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
-import {} from "@vercel/blob";
 
 async function setupBrowser(): Promise<Browser> {
   console.log("Setting up browser...");
-  chromium.setGraphicsMode = false
 
   try {
     const browser = await puppeteer.launch({
