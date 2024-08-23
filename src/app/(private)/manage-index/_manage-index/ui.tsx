@@ -31,7 +31,7 @@ import {
 } from "@/types/database";
 import { useState, useCallback } from "react";
 import UrlTree, { UrlTreeNode } from "../_docu-scraper/url-tree";
-import { fetchScrapingResults } from "../_docu-scraper/actions";
+import { fetchScrapingResultsAndStatus } from "../_docu-scraper/actions";
 
 export default function ManageIndex() {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -89,8 +89,8 @@ export default function ManageIndex() {
     setSelectedRun(run);
     setIsLoadingFileTree(true);
     try {
-      const results = await fetchScrapingResults(run.id);
-      setFileTree(results);
+      const {treeData} = await fetchScrapingResultsAndStatus(run.id);
+      setFileTree(treeData);
     } catch (error) {
       console.error("Error fetching file tree:", error);
     } finally {

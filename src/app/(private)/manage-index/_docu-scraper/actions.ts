@@ -422,9 +422,25 @@ async function updateUrlStatus(client: VercelPoolClient,id: number, status: Scra
     `;
 }
 
-export async function fetchScrapingResults(
+export async function fetchUrlContent(
+  scrapeUrlId: number
+): Promise<string | null> {
+  const result = await sql<{ content: string }>`
+    SELECT content
+    FROM scraping_url
+    WHERE id = ${scrapeUrlId}
+  `;
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].content;
+}
+
+export async function fetchScrapingResultsAndStatus(
   scrapingRunId: number
-): Promise<UrlTreeNode> {
+): Promise<{ treeData: UrlTreeNode; isComplete: boolean }> {
   const result = await sql<ScrapingUrl>`
     SELECT id, url, status
     FROM scraping_url
@@ -435,12 +451,15 @@ export async function fetchScrapingResults(
 
   if (urls.length === 0) {
     return {
-      name: "No URLs discovered",
-      path: "/",
-      type: "directory",
-      children: [],
-      selected: false,
-      expanded: true,
+      treeData: {
+        name: "No URLs discovered",
+        path: "/",
+        type: "directory",
+        children: [],
+        selected: false,
+        expanded: true,
+      },
+      isComplete: true,
     };
   }
 
@@ -489,33 +508,13 @@ export async function fetchScrapingResults(
     });
   });
 
-  return root;
-}
+  // Count the number of QUEUED status
+  const incompleteCount = urls.filter(url => 
+    url.status === ScrapingStatus.QUEUED || url.status === ScrapingStatus.PROCESSING
+  ).length;
+  const isComplete = incompleteCount === 0;
 
-export async function fetchUrlContent(
-  scrapeUrlId: number
-): Promise<string | null> {
-  const result = await sql<{ content: string }>`
-    SELECT content
-    FROM scraping_url
-    WHERE id = ${scrapeUrlId}
-  `;
+  console.log("is complete", isComplete);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return result.rows[0].content;
-}
-
-export async function isScrapingComplete(
-  scrapingRunId: number
-): Promise<boolean> {
-  const result = await sql`
-      SELECT COUNT(*) as count
-      FROM scraping_url
-      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
-    `;
-
-  return result.rows[0].count === 0;
+  return { treeData: root, isComplete };
 }

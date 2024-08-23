@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   startDocuScraper,
-  fetchScrapingResults,
-  isScrapingComplete,
   cancelScrapingRun,
+  fetchScrapingResultsAndStatus,
 } from "./actions";
 import UrlTree, { UrlTreeNode } from "./url-tree";
 
@@ -70,13 +69,12 @@ export default function DocuScraper() {
 
   const fetchResults = async () => {
     if (!scrapingRunId) return;
-
+  
     try {
-      const results = await fetchScrapingResults(scrapingRunId);
-      setTreeData(results);
-
-      const complete = await isScrapingComplete(scrapingRunId);
-      if (complete) {
+      const { treeData, isComplete } = await fetchScrapingResultsAndStatus(scrapingRunId);
+      setTreeData(treeData);
+      
+      if (isComplete) {
         setIsLoading(false);
       }
     } catch (err) {
@@ -85,6 +83,24 @@ export default function DocuScraper() {
       setIsLoading(false);
     }
   };
+
+  // const fetchResults = async () => {
+  //   if (!scrapingRunId) return;
+
+  //   try {
+  //     const results = await fetchScrapingResults(scrapingRunId);
+  //     setTreeData(results);
+
+  //     const complete = await isScrapingComplete(scrapingRunId);
+  //     if (complete) {
+  //       setIsLoading(false);
+  //     }
+  //   } catch (err) {
+  //     console.error("Error fetching results:", err);
+  //     setError("Failed to fetch scraping results");
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleCancelScrapingRun = async () => {
     if (scrapingRunId) {
