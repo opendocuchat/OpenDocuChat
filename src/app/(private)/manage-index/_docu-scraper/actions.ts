@@ -162,8 +162,8 @@ async function crawlUrlWithRetry(
     try {
       console.log(`Attempt ${attempt}: Navigating to ${url}`);
 
-      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 10000 });
-      await page.waitForSelector("body", { timeout: 10000 });
+      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
+      await page.waitForSelector("body", { timeout: 40000 });
       await autoScroll(page);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
 
