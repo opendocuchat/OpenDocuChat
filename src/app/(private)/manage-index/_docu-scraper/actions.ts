@@ -13,16 +13,13 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 
 async function setupBrowser(): Promise<Browser> {
-
-  const chromiumExecutablePath = "/tmp/chromium";
-
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
+    executablePath: await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"),
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(chromiumExecutablePath),
     headless: chromium.headless,
-    // ignoreHTTPSErrors: true,
   });
+  return browser;
 }
 
 // async function setupBrowser(): Promise<Browser> {
