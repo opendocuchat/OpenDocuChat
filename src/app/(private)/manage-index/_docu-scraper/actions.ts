@@ -1,7 +1,7 @@
 "use server";
 
-import puppeteer, { Page, Browser } from "puppeteer-core";
-import { sql } from "@vercel/postgres";
+import puppeteer, { Page, Browser } from "puppeteer";
+import { sql, db, VercelPoolClient } from '@vercel/postgres';
 import {
   DataSource,
   DataSourceType,
@@ -12,15 +12,15 @@ import { UrlTreeNode } from "./url-tree";
 // import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
-async function setupBrowser(): Promise<Browser> {
-  return puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-    // ignoreHTTPSErrors: true,
-  });
-}
+// async function setupBrowser(): Promise<Browser> {
+//   return puppeteer.launch({
+//     args: chromium.args,
+//     defaultViewport: chromium.defaultViewport,
+//     executablePath: await chromium.executablePath(),
+//     headless: chromium.headless,
+//     // ignoreHTTPSErrors: true,
+//   });
+// }
 
 
 // async function setupBrowser(): Promise<Browser> {
@@ -33,18 +33,17 @@ async function setupBrowser(): Promise<Browser> {
 // }
 
 
-// async function setupBrowser(): Promise<Browser> {
-//   return puppeteer.launch({
-//     headless: true,
-//     args: [
-//       "--no-sandbox",
-//       "--disable-setuid-sandbox",
-//       "--disable-dev-shm-usage",
-//     ],
-//     defaultViewport: null,
-//   });
-// }
-
+async function setupBrowser(): Promise<Browser> {
+  return puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
+    defaultViewport: null,
+  });
+}
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
@@ -153,12 +152,10 @@ async function crawlUrlWithRetry(
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
 
       const { links, content } = await page.evaluate(() => {
-        // Extract links
         const links = Array.from(document.querySelectorAll("a"))
           .map((a) => a.href)
           .filter((href) => href.startsWith("http"));
 
-        // Extract visible text content
         const extractVisibleText = (node: Node): string => {
           if (node.nodeType === Node.TEXT_NODE) {
             return node.textContent?.trim() || "";
@@ -243,77 +240,29 @@ function getBasePath(url: string): string {
   return parsedUrl.pathname.split("/").slice(0, 2).join("/");
 }
 
-async function scrapeUrls(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
-  const browser = await setupBrowser();
-  const page = await setupPage(browser);
-
-  try {
-    const isCancelled = await isScrapingCancelled(scrapingRunId);
-    if (isCancelled) {
-      console.log(
-        `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
-      );
-      await cancelScrapingRun(scrapingRunId);
-      return;
-    }
-
-    const processingCount = await getProcessingUrlsCount(scrapingRunId);
-    if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-      console.log(`Max concurrent processing reached. Exiting this iteration.`);
-      return;
-    }
-
-    const nextUrl = await getNextUrlToCrawl(scrapingRunId);
-    if (!nextUrl) {
-      console.log(`No more URLs to crawl for run ${scrapingRunId}`);
-      return;
-    }
-
-    const { links: discoveredUrls, content } = await crawlUrlWithRetry(
-      nextUrl.url,
-      page,
-      startUrl,
-      settings
-    );
-
-    await Promise.all([
-      parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
-      updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
-      saveScrapedContent(nextUrl.id, content),
-    ]);
-
-    // Recursive call to continue scraping
-    await scrapeUrls(scrapingRunId, startUrl, settings);
-  } catch (error) {
-    console.error("Crawling failed:", error);
-  } finally {
-    await browser.close();
+async function saveScrapedContent(client: VercelPoolClient, urlId: number, content: string) {
+    await client.sql`
+      UPDATE scraping_url
+      SET content = ${content}
+      WHERE id = ${urlId}
+    `;
   }
-}
 
-async function getProcessingUrlsCount(scrapingRunId: number): Promise<number> {
-  const result = await sql`
-    SELECT COUNT(*) as count
-    FROM scraping_url
-    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING}
-  `;
-  return result.rows[0].count;
-}
+async function addUrlsToScrape(client: VercelPoolClient, scrapingRunId: number, urls: string[]) {
+  const addUrlPromises = urls.map(async (url) => {
+    const existingUrl = await client.sql`
+      SELECT id FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId} AND url = ${url}
+    `;
 
-async function saveScrapedContent(urlId: number, content: string) {
-  await sql`
-    UPDATE scraping_url
-    SET content = ${content}
-    WHERE id = ${urlId}
-  `;
-}
+    if (existingUrl.rows.length === 0) {
+      await client.sql`
+        INSERT INTO scraping_url (scraping_run_id, url, status)
+        VALUES (${scrapingRunId}, ${url}, ${ScrapingStatus.QUEUED})
+      `;
+    }
+  });
 
-async function parallelAddUrlsToScrape(scrapingRunId: number, urls: string[]) {
-  const addUrlPromises = urls.map((url) => addUrlToScrape(scrapingRunId, url));
   await Promise.all(addUrlPromises);
 }
 
@@ -340,41 +289,34 @@ export async function startDocuScraper(
   }
 }
 
-async function scrapeUrlsBatch(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
+
+
+async function scrapeUrlsBatch(scrapingRunId: number, startUrl: string, settings: CrawlerSettings) {
+  const pgClient = await db.connect();
   const browser = await setupBrowser();
   const page = await setupPage(browser);
 
   const startTime = Date.now();
-  const timeoutDuration = 50000; // 50 seconds, leaving some buffer for cleanup
+  const timeoutDuration = 50000;
 
   try {
     while (Date.now() - startTime < timeoutDuration) {
-      const isCancelled = await isScrapingCancelled(scrapingRunId);
+      const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
       if (isCancelled) {
-        console.log(
-          `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
-        );
+        console.log(`Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`);
         await cancelScrapingRun(scrapingRunId);
         return;
       }
 
-      const processingCount = await getProcessingUrlsCount(scrapingRunId);
+      const processingCount = await getProcessingUrlsCount(pgClient, scrapingRunId);
       if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-        console.log(
-          `Max concurrent processing reached. Stopping this scraper.`
-        );
+        console.log(`Max concurrent processing reached. Stopping this scraper.`);
         return;
       }
 
-      const nextUrl = await getNextUrlToCrawl(scrapingRunId);
+      const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
       if (!nextUrl) {
-        console.log(
-          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
-        );
+        console.log(`No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`);
         return;
       }
 
@@ -391,16 +333,55 @@ async function scrapeUrlsBatch(
       );
 
       await Promise.all([
-        parallelAddUrlsToScrape(scrapingRunId, discoveredUrls),
-        updateUrlStatus(nextUrl.id, ScrapingStatus.COMPLETED),
-        saveScrapedContent(nextUrl.id, content),
+        addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
+        updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
+        saveScrapedContent(pgClient, nextUrl.id, content),
       ]);
     }
   } catch (error) {
     console.error("Crawling failed:", error);
   } finally {
+    pgClient.release();
     await browser.close();
   }
+}
+
+async function checkIfCancelled(client: VercelPoolClient, scrapingRunId: number): Promise<boolean> {
+  const result = await client.sql`
+    SELECT COUNT(*) as count
+    FROM scraping_url
+    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.CANCELLED}
+  `;
+  return result.rows[0].count > 0;
+}
+
+async function getProcessingUrlsCount(client: VercelPoolClient, scrapingRunId: number): Promise<number> {
+  const result = await client.sql`
+    SELECT COUNT(*) as count
+    FROM scraping_url
+    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING}
+  `;
+  return result.rows[0].count;
+}
+
+async function getNextUrlToCrawl(client: VercelPoolClient, scrapingRunId: number): Promise<ScrapingUrl | null> {
+  const result = await client.sql<ScrapingUrl>`
+    WITH next_url AS (
+      SELECT id, url, status
+      FROM scraping_url
+      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+      ORDER BY RANDOM()
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    UPDATE scraping_url
+    SET status = ${ScrapingStatus.PROCESSING}, updated_at = CURRENT_TIMESTAMP
+    FROM next_url
+    WHERE scraping_url.id = next_url.id
+    RETURNING scraping_url.id, scraping_url.url, scraping_url.status
+  `;
+
+  return result.rows[0] || null;
 }
 
 async function createScrapingRun(url: string) {
@@ -433,30 +414,8 @@ async function addUrlToScrape(scrapingRunId: number, url: string) {
   }
 }
 
-async function getNextUrlToCrawl(
-  scrapingRunId: number
-): Promise<ScrapingUrl | null> {
-  const result = await sql<ScrapingUrl>`
-    WITH next_url AS (
-      SELECT id, url, status
-      FROM scraping_url
-      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
-      ORDER BY RANDOM()
-      LIMIT 1
-      FOR UPDATE SKIP LOCKED
-    )
-    UPDATE scraping_url
-    SET status = ${ScrapingStatus.PROCESSING}, updated_at = CURRENT_TIMESTAMP
-    FROM next_url
-    WHERE scraping_url.id = next_url.id
-    RETURNING scraping_url.id, scraping_url.url, scraping_url.status
-  `;
-
-  return result.rows[0] || null;
-}
-
-async function updateUrlStatus(id: number, status: ScrapingStatus) {
-  await sql`
+async function updateUrlStatus(client: VercelPoolClient,id: number, status: ScrapingStatus) {
+  await client.sql`
       UPDATE scraping_url
       SET status = ${status}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
