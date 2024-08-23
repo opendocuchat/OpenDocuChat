@@ -10,25 +10,36 @@ import {
 } from "@/types/database";
 import { UrlTreeNode } from "./url-tree";
 import puppeteer, { Browser, Page } from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import { put } from "@vercel/blob";
 
 async function setupBrowser(): Promise<Browser> {
   console.log("Setting up browser...");
   try {
-    const executablePathValue = await chromium.executablePath();
-    console.log(`Executable path: ${executablePathValue}`);
-    const blob = await put("chromium-executable", executablePathValue, {
-      access: "public",
-    });
-    console.log(`Blob URL: ${blob.url}`);
+    // const executablePathValue = await chromium.executablePath();
+    // console.log(`Executable path: ${executablePathValue}`);
+    // const blob = await put("chromium-executable", executablePathValue, {
+    //   access: "public",
+    // });
+    // console.log(`Blob URL: ${blob.url}`);
+
+    // const browser = await puppeteer.launch({
+    //   executablePath: blob.url,
+    //   args: chromium.args,
+    //   defaultViewport: chromium.defaultViewport,
+    //   headless: chromium.headless,
+    // });
 
     const browser = await puppeteer.launch({
-      executablePath: blob.url,
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(
+        "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
+      ),
       headless: chromium.headless,
+      // ignoreHTTPSErrors: true,
     });
+
     console.log("Browser setup complete.");
     return browser;
   } catch (error) {
