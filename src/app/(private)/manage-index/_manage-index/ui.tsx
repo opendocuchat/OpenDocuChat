@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/sheet";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { getDataSources } from "./getDataSources";
-import { getScrapingRuns } from "./getScrapingRuns";
-import { getScrapingUrlDetails } from "./getScrapingUrlDetails";
 import {
   DataSource,
   ScrapingRun,
@@ -32,6 +30,7 @@ import {
 import { useState, useCallback } from "react";
 import UrlTree, { UrlTreeNode } from "../_docu-scraper/url-tree";
 import { fetchScrapingResultsAndStatus } from "../_docu-scraper/actions";
+import { getScrapingRunsAndUrls } from "./getScrapingRunsAndUrls";
 
 export default function ManageIndex() {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -60,14 +59,17 @@ export default function ManageIndex() {
       setIsLoading(true);
       setScrapingRuns([]);
       setScrapingUrlDetails({});
-      const runs = await getScrapingRuns(dataSource.id);
-      setScrapingRuns(runs);
-      const urlDetails: Record<number, ScrapingUrl[]> = {};
-      for (const run of runs) {
-        urlDetails[run.id] = await getScrapingUrlDetails(run.id);
+      try {
+        const { runs, urlDetails } = await getScrapingRunsAndUrls(
+          dataSource.id
+        );
+        setScrapingRuns(runs);
+        setScrapingUrlDetails(urlDetails);
+      } catch (error) {
+        console.error("Error fetching scraping runs and URLs:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setScrapingUrlDetails(urlDetails);
-      setIsLoading(false);
     }
   };
 
@@ -83,13 +85,11 @@ export default function ManageIndex() {
     return counts;
   };
 
-  // TODO: show file tree of each data source/run
-
   const handleRunClick = useCallback(async (run: ScrapingRun) => {
     setSelectedRun(run);
     setIsLoadingFileTree(true);
     try {
-      const {treeData} = await fetchScrapingResultsAndStatus(run.id);
+      const { treeData } = await fetchScrapingResultsAndStatus(run.id);
       setFileTree(treeData);
     } catch (error) {
       console.error("Error fetching file tree:", error);
