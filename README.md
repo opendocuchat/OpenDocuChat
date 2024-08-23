@@ -43,7 +43,8 @@ graph TD
 - [ ] Scrape Documentation Website
 - - [X] Discover URLs to index
 - - [X] Basic crawler settings (stay on domain, subdomain, path)
-- - [ ] Viewer for scraped page contents
+- - [X] Viewer for scraped page contents
+- - [ ] Indicate failed scrape status & reason better
 - - [ ] Add selected URLs to index
 - - [ ] Fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
 

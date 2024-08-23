@@ -1,6 +1,6 @@
 "use server";
 
-import puppeteer, { Page, Browser } from "puppeteer";
+// import puppeteer, { Page, Browser } from "puppeteer";
 import { sql, db, VercelPoolClient } from '@vercel/postgres';
 import {
   DataSource,
@@ -9,41 +9,30 @@ import {
   ScrapingUrl,
 } from "@/types/database";
 import { UrlTreeNode } from "./url-tree";
-// import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
-
-// async function setupBrowser(): Promise<Browser> {
-//   return puppeteer.launch({
-//     args: chromium.args,
-//     defaultViewport: chromium.defaultViewport,
-//     executablePath: await chromium.executablePath(),
-//     headless: chromium.headless,
-//     // ignoreHTTPSErrors: true,
-//   });
-// }
-
-
-// async function setupBrowser(): Promise<Browser> {
-//   return puppeteer.launch({
-//     args: chromium.args,
-//     defaultViewport: chromium.defaultViewport,
-//     executablePath: await chromium.executablePath(),
-//     headless: true,
-//   });
-// }
-
+import puppeteer, { Browser, Page } from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 async function setupBrowser(): Promise<Browser> {
   return puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-    ],
-    defaultViewport: null,
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+    ignoreHTTPSErrors: true,
   });
 }
+
+// async function setupBrowser(): Promise<Browser> {
+//   return puppeteer.launch({
+//     headless: true,
+//     args: [
+//       "--no-sandbox",
+//       "--disable-setuid-sandbox",
+//       "--disable-dev-shm-usage",
+//     ],
+//     defaultViewport: null,
+//   });
+// }
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
