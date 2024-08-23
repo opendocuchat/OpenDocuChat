@@ -34,10 +34,9 @@ async function setupBrowser(): Promise<Browser> {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(
-        "https://github.com/Sparticuz/chromium/releases/download/v110.0.1/chromium-v110.0.1-pack.tar"
+        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
       ),
       headless: chromium.headless,
-      // ignoreHTTPSErrors: true,
     });
 
     console.log("Browser setup complete.");
