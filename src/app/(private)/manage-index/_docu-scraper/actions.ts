@@ -14,18 +14,27 @@ import chromium from "@sparticuz/chromium";
 import { put } from "@vercel/blob";
 
 async function setupBrowser(): Promise<Browser> {
-  const executablePathValue = await chromium.executablePath();
-  const blob = await put("chromium-executable", executablePathValue, {
-    access: "public",
-  });
+  console.log("Setting up browser...");
+  try {
+    const executablePathValue = await chromium.executablePath();
+    console.log(`Executable path: ${executablePathValue}`);
+    const blob = await put("chromium-executable", executablePathValue, {
+      access: "public",
+    });
+    console.log(`Blob URL: ${blob.url}`);
 
-  const browser = await puppeteer.launch({
-    executablePath: blob.url,
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    headless: chromium.headless,
-  });
-  return browser;
+    const browser = await puppeteer.launch({
+      executablePath: blob.url,
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      headless: chromium.headless,
+    });
+    console.log("Browser setup complete.");
+    return browser;
+  } catch (error) {
+    console.error("Error setting up browser:", error);
+    throw error;
+  }
 }
 
 // async function setupBrowser(): Promise<Browser> {
@@ -87,11 +96,13 @@ export async function cancelScrapingRun(scrapingRunId: number) {
 }
 
 async function setupPage(browser: Browser): Promise<Page> {
+  console.log("Setting up page...");
   const page = await browser.newPage();
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
   );
   await page.setJavaScriptEnabled(true);
+  console.log("Page setup complete.");
   return page;
 }
 
