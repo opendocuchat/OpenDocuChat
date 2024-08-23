@@ -13,12 +13,15 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 
 async function setupBrowser(): Promise<Browser> {
+
+  const chromiumExecutablePath = "/tmp/chromium";
+
   return puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
+    executablePath: await chromium.executablePath(chromiumExecutablePath),
     headless: chromium.headless,
-    ignoreHTTPSErrors: true,
+    // ignoreHTTPSErrors: true,
   });
 }
 
