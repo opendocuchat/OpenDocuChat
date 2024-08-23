@@ -17,11 +17,14 @@ async function setupBrowser(): Promise<Browser> {
 
   try {
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(
-        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
+        "https://drive.usercontent.google.com/u/0/uc?id=1gHvTat0CmOv_A-fzNUEt1lH7aw8YB48G&export=download"
       ),
+      // executablePath: await chromium.executablePath(
+      //   "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
+      // ),
       headless: chromium.headless,
     });
 
