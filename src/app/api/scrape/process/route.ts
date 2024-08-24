@@ -17,10 +17,8 @@ interface CrawlerSettings {
 export async function POST(request: NextRequest) {
   const { scrapingRunId, startUrl, settings } = await request.json();
 
-  // Start the scraping process
-  scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+  await scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
 
-  // Immediately return a response
   return NextResponse.json({
     success: true,
     message: "Scraping process started",
