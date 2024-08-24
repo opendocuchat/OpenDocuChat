@@ -70,7 +70,6 @@ export default function DocuScraper() {
     } catch (err) {
       console.error("Error starting scraper:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
