@@ -8,7 +8,10 @@ export async function POST(request: NextRequest) {
   const { startUrl, settings } = await request.json();
 
   if (!startUrl) {
-    return NextResponse.json({ success: false, error: "Invalid input" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "Invalid input" },
+      { status: 400 }
+    );
   }
 
   console.log(`Starting scraper with start URL: ${startUrl}`);
@@ -17,19 +20,34 @@ export async function POST(request: NextRequest) {
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    }).catch(console.error);
+    const processScrape = async () => {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
+      await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+      }).catch(console.error);
+    };
+    setTimeout(processScrape, 0);
+
+    // const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
+    // await fetch(url, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    // }).catch(console.error);
 
     return NextResponse.json({ success: true, scrapingRunId, dataSourceId });
   } catch (error) {
     console.error("Error starting scraper:", error);
-    return NextResponse.json({ success: false, error: "Failed to start scraping" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to start scraping" },
+      { status: 500 }
+    );
   }
 }
 
