@@ -182,7 +182,6 @@ export async function POST(request: NextRequest) {
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    // Start the initial scraper
     scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
 
     return NextResponse.json({ success: true, scrapingRunId, dataSourceId });
@@ -444,5 +443,3 @@ async function addUrlToScrape(scrapingRunId: number, url: string) {
       `;
   }
 }
-
-// ... (keep all the remaining functions)

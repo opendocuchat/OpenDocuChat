@@ -48,7 +48,7 @@ export default function DocuScraper() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/scrape', {
+      const response = await fetch('/api/scrape/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
