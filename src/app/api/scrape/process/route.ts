@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, VercelPoolClient } from "@vercel/postgres";
+import puppeteerLocal from "puppeteer";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 import { ScrapingStatus, ScrapingUrl } from "@/types/database";
@@ -24,6 +25,37 @@ export async function POST(request: NextRequest) {
     success: true,
     message: "Scraping process started",
   });
+}
+
+async function setupBrowser(): Promise<any> {
+  if (process.env.VERCEL_ENV === "production") {
+    console.log("Setting up browser on Vercel...");
+    try {
+      const browser = await puppeteer.launch({
+        args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(
+          "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
+        ),
+        headless: chromium.headless,
+      });
+      console.log("Browser setup complete on Vercel.");
+      return browser;
+    } catch (error) {
+      console.error("Error setting up browser on Vercel:", error);
+      throw error;
+    }
+  } else {
+    return puppeteerLocal.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
+      defaultViewport: null,
+    });
+  }
 }
 
 async function setupPage(browser: Browser): Promise<Page> {
@@ -326,24 +358,5 @@ function isIndexableUrl(
   } catch (error) {
     console.error(`Invalid URL: ${url}`);
     return false;
-  }
-}
-
-async function setupBrowser(): Promise<Browser> {
-  console.log("Setting up browser...");
-  try {
-    const browser = await puppeteer.launch({
-      args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(
-        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
-      ),
-      headless: chromium.headless,
-    });
-    console.log("Browser setup complete.");
-    return browser;
-  } catch (error) {
-    console.error("Error setting up browser:", error);
-    throw error;
   }
 }

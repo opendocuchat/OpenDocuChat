@@ -13,6 +13,8 @@ import { UrlTreeNode } from "./url-tree";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 
+// TODO: manage scraper management from here (retriggering etc). just the actual scraping inside api endpoint. re-triggering from inside api doesnt seem to work
+
 async function setupBrowser(): Promise<Browser> {
   console.log("Setting up browser...");
 
@@ -293,7 +295,7 @@ export async function startDocuScraper(
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
     fetch(url, {
       method: 'POST',
       headers: {
