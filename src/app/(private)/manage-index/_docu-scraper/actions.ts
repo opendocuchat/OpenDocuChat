@@ -9,96 +9,32 @@ import {
   ScrapingUrl,
 } from "@/types/database";
 import { UrlTreeNode } from "./url-tree";
-// import puppeteer, { Browser, Page } from "puppeteer-core";
+import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
-import { chromium as playwright, Browser, Page } from 'playwright-core';
-import executablePath from '@sparticuz/chromium-min';
 
-const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar';
-
-export async function setupBrowser() {
-  console.log("Starting browser setup...");
-  const startTime = Date.now();
+async function setupBrowser(): Promise<Browser> {
+  console.log("Setting up browser...");
 
   try {
-    const browser = await playwright.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(CHROMIUM_URL),
-      headless: true,
+    const browser = await puppeteer.launch({
+      args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+      defaultViewport: chromium.defaultViewport,
+      // executablePath: await chromium.executablePath(
+      //   "https://drive.usercontent.google.com/u/0/uc?id=1gHvTat0CmOv_A-fzNUEt1lH7aw8YB48G&export=download"
+      // ),
+      executablePath: await chromium.executablePath(
+        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
+      ),
+      headless: chromium.headless,
     });
 
-    console.log(`Browser setup complete. Time taken: ${Date.now() - startTime}ms`);
+    console.log("Browser setup complete.");
     return browser;
   } catch (error) {
-    console.error(`Browser setup failed after ${Date.now() - startTime}ms:`, error);
+    console.error("Error setting up browser:", error);
     throw error;
   }
 }
-
-
-// const CHROME_URL = "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar";
-// const TIMEOUT = 60000;
-
-// async function setupBrowser(): Promise<Browser> {
-//   console.log("Starting browser setup...");
-//   const startTime = Date.now();
-
-//   try {
-//     console.log("Fetching Chrome executable path...");
-//     const executablePath = (await Promise.race([
-//       chromium.executablePath(CHROME_URL),
-//       new Promise((_, reject) => 
-//         setTimeout(() => reject(new Error("Chromium download timed out")), TIMEOUT)
-//       )
-//     ])) as string;
-//     console.log(`Chrome executable path fetched: ${executablePath}`);
-//     console.log(`Time taken to fetch executable path: ${Date.now() - startTime}ms`);
-
-//     console.log("Launching browser...");
-//     const browser = (await Promise.race([
-//       puppeteer.launch({
-//         args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-//         defaultViewport: chromium.defaultViewport,
-//         executablePath: executablePath,
-//         headless: chromium.headless,
-//       }),
-//       new Promise((_, reject) => 
-//         setTimeout(() => reject(new Error("Browser launch timed out")), TIMEOUT)
-//       )
-//     ])) as Browser;
-//     console.log("Browser launched successfully");
-//     console.log(`Total time taken: ${Date.now() - startTime}ms`);
-
-//     return browser;
-//   } catch (error) {
-//     console.error(`Error setting up browser after ${Date.now() - startTime}ms:`, error);
-//     throw error;
-//   }
-// }
-
-// async function setupBrowser(): Promise<Browser> {
-//   console.log("Setting up browser...");
-
-//   try {
-//     const browser = await puppeteer.launch({
-//       args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-//       defaultViewport: chromium.defaultViewport,
-//       executablePath: await chromium.executablePath(
-//         "https://drive.usercontent.google.com/u/0/uc?id=1gHvTat0CmOv_A-fzNUEt1lH7aw8YB48G&export=download"
-//       ),
-//       // executablePath: await chromium.executablePath(
-//       //   "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
-//       // ),
-//       headless: chromium.headless,
-//     });
-
-//     console.log("Browser setup complete.");
-//     return browser;
-//   } catch (error) {
-//     console.error("Error setting up browser:", error);
-//     throw error;
-//   }
-// }
 
 // async function setupBrowser(): Promise<Browser> {
 //   return puppeteer.launch({
@@ -161,10 +97,10 @@ export async function cancelScrapingRun(scrapingRunId: number) {
 async function setupPage(browser: Browser): Promise<Page> {
   console.log("Setting up page...");
   const page = await browser.newPage();
-  // await page.setUserAgent(
-  //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-  // );
-  // await page.setJavaScriptEnabled(true);
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  );
+  await page.setJavaScriptEnabled(true);
   console.log("Page setup complete.");
   return page;
 }
@@ -215,8 +151,7 @@ async function crawlUrlWithRetry(
     try {
       console.log(`Attempt ${attempt}: Navigating to ${url}`);
 
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 40000 });
-      // await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
+      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
       await page.waitForSelector("body", { timeout: 40000 });
       await autoScroll(page);
       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
@@ -610,7 +545,6 @@ export async function fetchScrapingResultsAndStatus(
     });
   });
 
-  // Count the number of QUEUED status
   const incompleteCount = urls.filter(
     (url) =>
       url.status === ScrapingStatus.QUEUED ||
