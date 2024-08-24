@@ -142,6 +142,7 @@ async function scrapeUrlsBatch(
         updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
         saveScrapedContent(pgClient, nextUrl.id, content),
       ]);
+      console.log("Crawled URL successfuly:", nextUrl.url);
     }
   } catch (error) {
     console.error("Crawling failed:", error);

@@ -1,3 +1,4 @@
+// app/(private)/manage-index/_docu-scraper/actions.ts
 "use server";
 
 // import puppeteer, { Page, Browser } from "puppeteer";
@@ -292,8 +293,14 @@ export async function startDocuScraper(
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    // Start the initial scraper
-    scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    }).catch(console.error);
 
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
@@ -301,6 +308,30 @@ export async function startDocuScraper(
     return { success: false, error: "Failed to start scraping" };
   }
 }
+
+
+// export async function startDocuScraper(
+//   startUrl: string,
+//   settings: CrawlerSettings
+// ) {
+//   if (!startUrl) {
+//     throw new Error("Invalid input");
+//   }
+//   console.log(`Starting scraper with start URL: ${startUrl}`);
+
+//   try {
+//     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
+//     await addUrlToScrape(scrapingRunId, startUrl);
+
+//     // Start the initial scraper
+//     scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+
+//     return { success: true, scrapingRunId, dataSourceId };
+//   } catch (error) {
+//     console.error("Error starting scraper:", error);
+//     return { success: false, error: "Failed to start scraping" };
+//   }
+// }
 
 async function scrapeUrlsBatch(
   scrapingRunId: number,

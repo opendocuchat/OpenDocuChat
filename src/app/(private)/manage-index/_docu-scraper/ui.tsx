@@ -43,69 +43,70 @@ export default function DocuScraper() {
     }));
   };
 
-  const discoverUrls = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/scrape/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          startUrl: url,
-          settings: crawlSettings,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success && result.scrapingRunId) {
-        setScrapingRunId(result.scrapingRunId);
-        console.log("Scraping started with ID:", result.scrapingRunId);
-      } else {
-        throw new Error(result.error || "Failed to start scraping");
-      }
-    } catch (err) {
-      console.error("Error starting scraper:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-      setIsLoading(false);
-    }
-  };
-
-
   // const discoverUrls = async (e: React.FormEvent) => {
   //   e.preventDefault();
   //   setIsLoading(true);
   //   setError(null);
   //   try {
-  //     const result = await startDocuScraper(url, crawlSettings);
-  //     if ("success" in result && result.success && "scrapingRunId" in result) {
-  //       const scrapingRunId = result.scrapingRunId as number | null;
-  //       setScrapingRunId(scrapingRunId);
-  //       console.log("Scraping started with ID:", scrapingRunId);
-  //     } else if ("error" in result) {
-  //       throw new Error((result.error as string) || "Failed to start scraping");
+  //     const response = await fetch('/api/scrape/start', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         startUrl: url,
+  //         settings: crawlSettings,
+  //       }),
+  //     });
+
+  //     const result = await response.json();
+
+  //     if (response.ok && result.success && result.scrapingRunId) {
+  //       setScrapingRunId(result.scrapingRunId);
+  //       console.log("Scraping started with ID:", result.scrapingRunId);
   //     } else {
-  //       throw new Error("Unknown error");
+  //       throw new Error(result.error || "Failed to start scraping");
   //     }
   //   } catch (err) {
   //     console.error("Error starting scraper:", err);
-  //     setError(
-  //       err instanceof Error ? err.message : "An unknown error occurred"
-  //     );
+  //     setError(err instanceof Error ? err.message : "An unknown error occurred");
   //     setIsLoading(false);
   //   }
   // };
 
+  const discoverUrls = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await startDocuScraper(url, crawlSettings);
+      if ("success" in result && result.success && "scrapingRunId" in result) {
+        const scrapingRunId = result.scrapingRunId as number | null;
+        setScrapingRunId(scrapingRunId);
+        console.log("Scraping started with ID:", scrapingRunId);
+      } else if ("error" in result) {
+        throw new Error((result.error as string) || "Failed to start scraping");
+      } else {
+        throw new Error("Unknown error");
+      }
+    } catch (err) {
+      console.error("Error starting scraper:", err);
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+      setIsLoading(false);
+    }
+  };
+
   const fetchResults = async () => {
     if (!scrapingRunId) return;
-  
+
     try {
-      const { treeData, isComplete } = await fetchScrapingResultsAndStatus(scrapingRunId);
+      const { treeData, isComplete } = await fetchScrapingResultsAndStatus(
+        scrapingRunId
+      );
       setTreeData(treeData);
-      
+
       if (isComplete) {
         setIsLoading(false);
       }

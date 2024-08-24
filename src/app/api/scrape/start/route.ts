@@ -20,26 +20,15 @@ export async function POST(request: NextRequest) {
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    const processScrape = async () => {
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
-      await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-      }).catch(console.error);
-    };
-    setTimeout(processScrape, 0);
 
-    // const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
-    // await fetch(url, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    // }).catch(console.error);
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/scrape/process`;
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, scrapingRunId, dataSourceId });
   } catch (error) {
