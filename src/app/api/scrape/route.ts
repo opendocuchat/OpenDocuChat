@@ -204,7 +204,7 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-export async function cancelScrapingRun(scrapingRunId: number) {
+async function cancelScrapingRun(scrapingRunId: number) {
   try {
     await sql`
         UPDATE scraping_url
