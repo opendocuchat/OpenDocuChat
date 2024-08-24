@@ -17,11 +17,12 @@ export async function POST(request: NextRequest) {
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    fetch(`http://www.${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/scrape/process`, {
+    fetch(`http://www.${process.env.VERCEL_URL}/api/scrape/process`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      keepalive: true,
       body: JSON.stringify({ scrapingRunId, startUrl, settings }),
     }).catch(console.error);
 

@@ -15,7 +15,7 @@ interface CrawlerSettings {
 }
 
 export async function POST(request: NextRequest) {
-    console.log("Scraping process started");
+  console.log("Scraping process started");
   const { scrapingRunId, startUrl, settings } = await request.json();
 
   await scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
@@ -198,15 +198,14 @@ async function addUrlsToScrape(
 }
 
 function getBaseUrl(url: string): string {
-    const parsedUrl = new URL(url);
-    return `${parsedUrl.protocol}//${parsedUrl.hostname}`;
-  }
-  
-  function getBasePath(url: string): string {
-    const parsedUrl = new URL(url);
-    return parsedUrl.pathname.split("/").slice(0, 2).join("/");
-  }
-  
+  const parsedUrl = new URL(url);
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+}
+
+function getBasePath(url: string): string {
+  const parsedUrl = new URL(url);
+  return parsedUrl.pathname.split("/").slice(0, 2).join("/");
+}
 
 async function crawlUrlWithRetry(
   url: string,
