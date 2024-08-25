@@ -43,37 +43,6 @@ export default function DocuScraper() {
     }));
   };
 
-  // const discoverUrls = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setIsLoading(true);
-  //   setError(null);
-  //   try {
-  //     const response = await fetch('/api/scrape/start', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         startUrl: url,
-  //         settings: crawlSettings,
-  //       }),
-  //     });
-
-  //     const result = await response.json();
-
-  //     if (response.ok && result.success && result.scrapingRunId) {
-  //       setScrapingRunId(result.scrapingRunId);
-  //       console.log("Scraping started with ID:", result.scrapingRunId);
-  //     } else {
-  //       throw new Error(result.error || "Failed to start scraping");
-  //     }
-  //   } catch (err) {
-  //     console.error("Error starting scraper:", err);
-  //     setError(err instanceof Error ? err.message : "An unknown error occurred");
-  //     setIsLoading(false);
-  //   }
-  // };
-
   const discoverUrls = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -116,24 +85,6 @@ export default function DocuScraper() {
       setIsLoading(false);
     }
   };
-
-  // const fetchResults = async () => {
-  //   if (!scrapingRunId) return;
-
-  //   try {
-  //     const results = await fetchScrapingResults(scrapingRunId);
-  //     setTreeData(results);
-
-  //     const complete = await isScrapingComplete(scrapingRunId);
-  //     if (complete) {
-  //       setIsLoading(false);
-  //     }
-  //   } catch (err) {
-  //     console.error("Error fetching results:", err);
-  //     setError("Failed to fetch scraping results");
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const handleCancelScrapingRun = async () => {
     if (scrapingRunId) {

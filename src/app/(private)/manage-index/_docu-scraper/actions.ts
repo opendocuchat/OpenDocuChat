@@ -15,29 +15,26 @@ import chromium from "@sparticuz/chromium-min";
 
 // TODO: manage scraper management from here (retriggering etc). just the actual scraping inside api endpoint. re-triggering from inside api doesnt seem to work
 
-async function setupBrowser(): Promise<Browser> {
-  console.log("Setting up browser...");
+// async function setupBrowser(): Promise<Browser> {
+//   console.log("Setting up browser...");
 
-  try {
-    const browser = await puppeteer.launch({
-      args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-      defaultViewport: chromium.defaultViewport,
-      // executablePath: await chromium.executablePath(
-      //   "https://drive.usercontent.google.com/u/0/uc?id=1gHvTat0CmOv_A-fzNUEt1lH7aw8YB48G&export=download"
-      // ),
-      executablePath: await chromium.executablePath(
-        "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
-      ),
-      headless: chromium.headless,
-    });
+//   try {
+//     const browser = await puppeteer.launch({
+//       args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+//       defaultViewport: chromium.defaultViewport,
+//       executablePath: await chromium.executablePath(
+//         "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
+//       ),
+//       headless: chromium.headless,
+//     });
 
-    console.log("Browser setup complete.");
-    return browser;
-  } catch (error) {
-    console.error("Error setting up browser:", error);
-    throw error;
-  }
-}
+//     console.log("Browser setup complete.");
+//     return browser;
+//   } catch (error) {
+//     console.error("Error setting up browser:", error);
+//     throw error;
+//   }
+// }
 
 // async function setupBrowser(): Promise<Browser> {
 //   return puppeteer.launch({
@@ -50,6 +47,61 @@ async function setupBrowser(): Promise<Browser> {
 //     defaultViewport: null,
 //   });
 // }
+
+// export async function startDocuScraper(
+//   startUrl: string,
+//   settings: CrawlerSettings
+// ) {
+//   if (!startUrl) {
+//     throw new Error("Invalid input");
+//   }
+//   console.log(`Starting scraper with start URL: ${startUrl}`);
+
+//   try {
+//     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
+//     await addUrlToScrape(scrapingRunId, startUrl);
+
+//     // Start the initial scraper
+//     await triggerScraping(scrapingRunId, startUrl, settings);
+
+//     return { success: true, scrapingRunId, dataSourceId };
+//   } catch (error) {
+//     console.error("Error starting scraper:", error);
+//     return { success: false, error: "Failed to start scraping" };
+//   }
+// }
+
+async function triggerScraping(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
+  const maxConcurrent = 3;
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
+
+  for (let i = 0; i < maxConcurrent; i++) {
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    }).catch(console.error);
+  }
+}
+
+export async function continueScraping(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
+  const processingCount = await getProcessingUrlsCount(scrapingRunId);
+  if (processingCount < MAX_CONCURRENT_PROCESSING) {
+    await triggerScraping(scrapingRunId, startUrl, settings);
+  }
+}
+
+
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
@@ -335,73 +387,73 @@ export async function startDocuScraper(
 //   }
 // }
 
-async function scrapeUrlsBatch(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
-  const pgClient = await db.connect();
-  const browser = await setupBrowser();
-  const page = await setupPage(browser);
+// async function scrapeUrlsBatch(
+//   scrapingRunId: number,
+//   startUrl: string,
+//   settings: CrawlerSettings
+// ) {
+//   const pgClient = await db.connect();
+//   const browser = await setupBrowser();
+//   const page = await setupPage(browser);
 
-  const startTime = Date.now();
-  const timeoutDuration = 50000;
+//   const startTime = Date.now();
+//   const timeoutDuration = 50000;
 
-  try {
-    while (Date.now() - startTime < timeoutDuration) {
-      const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
-      if (isCancelled) {
-        console.log(
-          `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
-        );
-        await cancelScrapingRun(scrapingRunId);
-        return;
-      }
+//   try {
+//     while (Date.now() - startTime < timeoutDuration) {
+//       const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
+//       if (isCancelled) {
+//         console.log(
+//           `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
+//         );
+//         await cancelScrapingRun(scrapingRunId);
+//         return;
+//       }
 
-      const processingCount = await getProcessingUrlsCount(
-        pgClient,
-        scrapingRunId
-      );
-      if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-        console.log(
-          `Max concurrent processing reached. Stopping this scraper.`
-        );
-        return;
-      }
+//       const processingCount = await getProcessingUrlsCount(
+//         pgClient,
+//         scrapingRunId
+//       );
+//       if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+//         console.log(
+//           `Max concurrent processing reached. Stopping this scraper.`
+//         );
+//         return;
+//       }
 
-      const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
-      if (!nextUrl) {
-        console.log(
-          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
-        );
-        return;
-      }
+//       const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
+//       if (!nextUrl) {
+//         console.log(
+//           `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
+//         );
+//         return;
+//       }
 
-      if (processingCount < MAX_CONCURRENT_PROCESSING - 1) {
-        console.log("Triggering additional scraper");
-        scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
-      }
+//       if (processingCount < MAX_CONCURRENT_PROCESSING - 1) {
+//         console.log("Triggering additional scraper");
+//         scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+//       }
 
-      const { links: discoveredUrls, content } = await crawlUrlWithRetry(
-        nextUrl.url,
-        page,
-        startUrl,
-        settings
-      );
+//       const { links: discoveredUrls, content } = await crawlUrlWithRetry(
+//         nextUrl.url,
+//         page,
+//         startUrl,
+//         settings
+//       );
 
-      await Promise.all([
-        addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
-        updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
-        saveScrapedContent(pgClient, nextUrl.id, content),
-      ]);
-    }
-  } catch (error) {
-    console.error("Crawling failed:", error);
-  } finally {
-    pgClient.release();
-    await browser.close();
-  }
-}
+//       await Promise.all([
+//         addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
+//         updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
+//         saveScrapedContent(pgClient, nextUrl.id, content),
+//       ]);
+//     }
+//   } catch (error) {
+//     console.error("Crawling failed:", error);
+//   } finally {
+//     pgClient.release();
+//     await browser.close();
+//   }
+// }
 
 async function checkIfCancelled(
   client: VercelPoolClient,
@@ -416,16 +468,27 @@ async function checkIfCancelled(
 }
 
 async function getProcessingUrlsCount(
-  client: VercelPoolClient,
   scrapingRunId: number
 ): Promise<number> {
-  const result = await client.sql`
+  const result = await sql`
     SELECT COUNT(*) as count
     FROM scraping_url
     WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING}
   `;
   return result.rows[0].count;
 }
+
+// async function getProcessingUrlsCount(
+//   client: VercelPoolClient,
+//   scrapingRunId: number
+// ): Promise<number> {
+//   const result = await client.sql`
+//     SELECT COUNT(*) as count
+//     FROM scraping_url
+//     WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING}
+//   `;
+//   return result.rows[0].count;
+// }
 
 async function getNextUrlToCrawl(
   client: VercelPoolClient,

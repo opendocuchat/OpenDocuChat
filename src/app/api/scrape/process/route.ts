@@ -28,8 +28,17 @@ export async function POST(request: NextRequest) {
 }
 
 async function setupBrowser(): Promise<any> {
-  if (process.env.VERCEL_ENV === "production") {
-    console.log("Setting up browser on Vercel...");
+  if (process.env.VERCEL_ENV === "development") {
+    return puppeteerLocal.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
+      defaultViewport: null,
+    });
+  } else {
     try {
       const browser = await puppeteer.launch({
         args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
@@ -45,16 +54,6 @@ async function setupBrowser(): Promise<any> {
       console.error("Error setting up browser on Vercel:", error);
       throw error;
     }
-  } else {
-    return puppeteerLocal.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-      defaultViewport: null,
-    });
   }
 }
 
@@ -121,11 +120,11 @@ async function scrapeUrlsBatch(
   startUrl: string,
   settings: any
 ) {
+  const startTime = Date.now();
   const pgClient = await db.connect();
   const browser = await setupBrowser();
   const page = await setupPage(browser);
 
-  const startTime = Date.now();
   const timeoutDuration = 50000;
 
   try {
@@ -133,8 +132,9 @@ async function scrapeUrlsBatch(
       const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
       if (isCancelled) {
         console.log(
-          `Scraping run ${scrapingRunId} has been cancelled. Stopping scraping.`
+          `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
         );
+        await browser.close();
         return;
       }
 
@@ -146,6 +146,7 @@ async function scrapeUrlsBatch(
         console.log(
           `Max concurrent processing reached. Stopping this scraper.`
         );
+        await browser.close();
         return;
       }
 
@@ -154,6 +155,7 @@ async function scrapeUrlsBatch(
         console.log(
           `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
         );
+        await browser.close();
         return;
       }
 
@@ -162,19 +164,35 @@ async function scrapeUrlsBatch(
         scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
       }
 
-      const { links: discoveredUrls, content } = await crawlUrlWithRetry(
-        nextUrl.url,
-        page,
-        startUrl,
-        settings
-      );
+      const timeLeft = timeoutDuration - (Date.now() - startTime);
+      console.log(`Time left: ${timeLeft}ms`);
+      if (timeLeft <= 0) {
+        break;
+      }
 
-      await Promise.all([
-        addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
-        updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
-        saveScrapedContent(pgClient, nextUrl.id, content),
-      ]);
-      console.log("Crawled URL successfuly:", nextUrl.url);
+      try {
+        const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Scraping timeout')), timeLeft)
+        );
+
+        const { links: discoveredUrls, content } = await Promise.race([
+            scrapePromise,
+            timeoutPromise
+          ]) as { links: string[]; content: string };
+
+        await Promise.all([
+          addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
+          updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
+          saveScrapedContent(pgClient, nextUrl.id, content),
+        ]);
+        console.log("Crawled URL successfully:", nextUrl.url);
+      } catch (error) {
+        console.error(`Error or timeout while crawling URL ${nextUrl.url}:`, error);
+        await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
+        await page.close();
+        await browser.close();
+      }
     }
   } catch (error) {
     console.error("Crawling failed:", error);
@@ -240,75 +258,133 @@ function getBasePath(url: string): string {
   return parsedUrl.pathname.split("/").slice(0, 2).join("/");
 }
 
-async function crawlUrlWithRetry(
-  url: string,
-  page: Page,
-  startUrl: string,
-  settings: CrawlerSettings,
-  maxRetries = 3
-): Promise<{ links: string[]; content: string }> {
-  const baseUrl = getBaseUrl(startUrl);
-  const basePath = getBasePath(startUrl);
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Attempt ${attempt}: Navigating to ${url}`);
-
-      await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
-      await page.waitForSelector("body", { timeout: 40000 });
-      await autoScroll(page);
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
-
-      const { links, content } = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll("a"))
-          .map((a) => a.href)
-          .filter((href) => href.startsWith("http"));
-
-        const extractVisibleText = (node: Node): string => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            return node.textContent?.trim() || "";
-          }
-          if (node.nodeType !== Node.ELEMENT_NODE) {
-            return "";
-          }
-          const element = node as Element;
-          const style = window.getComputedStyle(element);
-          if (style.display === "none" || style.visibility === "hidden") {
-            return "";
-          }
-          return Array.from(element.childNodes)
-            .map(extractVisibleText)
-            .join(" ")
-            .trim();
-        };
-
-        const content = extractVisibleText(document.body);
-
-        return { links, content };
+async function crawlUrl(
+    url: string,
+    page: Page,
+    startUrl: string,
+    settings: CrawlerSettings
+  ): Promise<{ links: string[]; content: string }> {
+    const baseUrl = getBaseUrl(startUrl);
+    const basePath = getBasePath(startUrl);
+  
+    console.log(`Navigating to ${url}`);
+  
+    await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
+    await page.waitForSelector("body", { timeout: 40000 });
+    await autoScroll(page);
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+  
+    const { links, content } = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll("a"))
+        .map((a) => a.href)
+        .filter((href) => href.startsWith("http"));
+  
+      const extractVisibleText = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent?.trim() || "";
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return "";
+        }
+        const element = node as Element;
+        const style = window.getComputedStyle(element);
+        if (style.display === "none" || style.visibility === "hidden") {
+          return "";
+        }
+        return Array.from(element.childNodes)
+          .map(extractVisibleText)
+          .join(" ")
+          .trim();
+      };
+  
+      const content = extractVisibleText(document.body);
+  
+      return { links, content };
+    });
+  
+    const uniqueLinks = Array.from(new Set(links));
+  
+    const indexableLinks = uniqueLinks
+      .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
+      .map((link) => {
+        const url = new URL(link);
+        url.hash = "";
+        return url.toString();
       });
-
-      const uniqueLinks = Array.from(new Set(links));
-
-      const indexableLinks = uniqueLinks
-        .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
-        .map((link) => {
-          const url = new URL(link);
-          url.hash = "";
-          return url.toString();
-        });
-
-      return { links: indexableLinks, content };
-    } catch (error) {
-      console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
-      if (attempt === maxRetries) {
-        console.error(`Max retries reached for ${url}`);
-        return { links: [], content: "" };
-      }
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
-    }
+  
+    return { links: indexableLinks, content };
   }
-  return { links: [], content: "" };
-}
+
+
+// async function crawlUrlWithRetry(
+//   url: string,
+//   page: Page,
+//   startUrl: string,
+//   settings: CrawlerSettings,
+//   maxRetries = 3
+// ): Promise<{ links: string[]; content: string }> {
+//   const baseUrl = getBaseUrl(startUrl);
+//   const basePath = getBasePath(startUrl);
+
+//   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+//     try {
+//       console.log(`Attempt ${attempt}: Navigating to ${url}`);
+
+//       await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
+//       await page.waitForSelector("body", { timeout: 40000 });
+//       await autoScroll(page);
+//       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+
+//       const { links, content } = await page.evaluate(() => {
+//         const links = Array.from(document.querySelectorAll("a"))
+//           .map((a) => a.href)
+//           .filter((href) => href.startsWith("http"));
+
+//         const extractVisibleText = (node: Node): string => {
+//           if (node.nodeType === Node.TEXT_NODE) {
+//             return node.textContent?.trim() || "";
+//           }
+//           if (node.nodeType !== Node.ELEMENT_NODE) {
+//             return "";
+//           }
+//           const element = node as Element;
+//           const style = window.getComputedStyle(element);
+//           if (style.display === "none" || style.visibility === "hidden") {
+//             return "";
+//           }
+//           return Array.from(element.childNodes)
+//             .map(extractVisibleText)
+//             .join(" ")
+//             .trim();
+//         };
+
+//         const content = extractVisibleText(document.body);
+
+//         return { links, content };
+//       });
+
+//       const uniqueLinks = Array.from(new Set(links));
+
+//       const indexableLinks = uniqueLinks
+//         .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
+//         .map((link) => {
+//           const url = new URL(link);
+//           url.hash = "";
+//           return url.toString();
+//         });
+
+//       return { links: indexableLinks, content };
+//     } catch (error) {
+//       console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
+//       if (attempt === maxRetries) {
+//         console.error(`Max retries reached for ${url}`);
+//         return { links: [], content: "" };
+//       }
+//       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+//     }
+//   }
+//   return { links: [], content: "" };
+// }
 
 async function autoScroll(page: Page): Promise<void> {
   await page.evaluate(async () => {
