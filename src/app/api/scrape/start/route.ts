@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   const { scrapingRunId, startUrl, settings } = await request.json();
-  console.log("Scraping process started");
+  console.log("Started scrape/start");
   const url = `${
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
   }/api/scrape/process`;
-  fetch(url, {
+  await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
