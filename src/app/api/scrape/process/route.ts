@@ -221,6 +221,7 @@ async function triggerScraper(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache"
       },
       body: JSON.stringify({ scrapingRunId, startUrl, settings }),
     }).catch(console.error);

@@ -1,3 +1,5 @@
+// app/api/scrape/start/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -10,6 +12,7 @@ export async function POST(request: NextRequest) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
     },
     body: JSON.stringify({ scrapingRunId, startUrl, settings }),
   }).catch(console.error);
