@@ -1,0 +1,16 @@
+import { NextRequest } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const { scrapingRunId, startUrl, settings } = await request.json();
+  console.log("Scraping process started");
+  const url = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/scrape/process`;
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+  }).catch(console.error);
+}

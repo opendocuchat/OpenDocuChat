@@ -216,7 +216,7 @@ async function triggerScraper(
   try {
     const url = `${
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/scrape/process`;
+    }/api/scrape/start`;
     fetch(url, {
       method: "POST",
       headers: {
