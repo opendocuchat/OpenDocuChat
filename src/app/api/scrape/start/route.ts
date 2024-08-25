@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   const { scrapingRunId, startUrl, settings } = await request.json();
@@ -13,4 +13,9 @@ export async function POST(request: NextRequest) {
     },
     body: JSON.stringify({ scrapingRunId, startUrl, settings }),
   }).catch(console.error);
+
+  return NextResponse.json({
+    success: true,
+    message: "Scraping process started",
+  });
 }
