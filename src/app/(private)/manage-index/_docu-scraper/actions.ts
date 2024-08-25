@@ -13,64 +13,6 @@ import { UrlTreeNode } from "./url-tree";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 
-// TODO: manage scraper management from here (retriggering etc). just the actual scraping inside api endpoint. re-triggering from inside api doesnt seem to work
-
-// async function setupBrowser(): Promise<Browser> {
-//   console.log("Setting up browser...");
-
-//   try {
-//     const browser = await puppeteer.launch({
-//       args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-//       defaultViewport: chromium.defaultViewport,
-//       executablePath: await chromium.executablePath(
-//         "https://github.com/Sparticuz/chromium/releases/download/v127.0.0/chromium-v127.0.0-pack.tar"
-//       ),
-//       headless: chromium.headless,
-//     });
-
-//     console.log("Browser setup complete.");
-//     return browser;
-//   } catch (error) {
-//     console.error("Error setting up browser:", error);
-//     throw error;
-//   }
-// }
-
-// async function setupBrowser(): Promise<Browser> {
-//   return puppeteer.launch({
-//     headless: true,
-//     args: [
-//       "--no-sandbox",
-//       "--disable-setuid-sandbox",
-//       "--disable-dev-shm-usage",
-//     ],
-//     defaultViewport: null,
-//   });
-// }
-
-// export async function startDocuScraper(
-//   startUrl: string,
-//   settings: CrawlerSettings
-// ) {
-//   if (!startUrl) {
-//     throw new Error("Invalid input");
-//   }
-//   console.log(`Starting scraper with start URL: ${startUrl}`);
-
-//   try {
-//     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
-//     await addUrlToScrape(scrapingRunId, startUrl);
-
-//     // Start the initial scraper
-//     await triggerScraping(scrapingRunId, startUrl, settings);
-
-//     return { success: true, scrapingRunId, dataSourceId };
-//   } catch (error) {
-//     console.error("Error starting scraper:", error);
-//     return { success: false, error: "Failed to start scraping" };
-//   }
-// }
-
 async function triggerScraping(
   scrapingRunId: number,
   startUrl: string,
