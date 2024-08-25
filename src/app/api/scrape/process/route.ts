@@ -128,7 +128,7 @@ async function scrapeUrlsBatch(
   const timeoutDuration = 40000;
 
   try {
-    while (Date.now() - startTime < timeoutDuration) {
+    // while (Date.now() - startTime < timeoutDuration) {
       console.log("Starting another scrapeUrlsBatch loop");
 
       const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
@@ -169,9 +169,9 @@ async function scrapeUrlsBatch(
 
       const timeLeft = timeoutDuration - (Date.now() - startTime);
       console.log(`Time left: ${timeLeft}ms`);
-      if (timeLeft <= 0) {
-        break;
-      }
+    //   if (timeLeft <= 0) {
+    //     break;
+    //   }
 
       try {
         const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
@@ -198,7 +198,7 @@ async function scrapeUrlsBatch(
         await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
         await browser.close();
       }
-    }
+    // }
     triggerScraper(scrapingRunId, startUrl, settings);
   } catch (error) {
     console.error("Crawling failed:", error);
@@ -296,10 +296,10 @@ async function crawlUrl(
 
   console.log(`Navigating to ${url}`);
 
-  await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
-  await page.waitForSelector("body", { timeout: 40000 });
+  await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 30000 });
+  await page.waitForSelector("body", { timeout: 30000 });
   await autoScroll(page);
-  await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
+  await new Promise((resolve) => globalThis.setTimeout(resolve, 2000));
 
   const { links, content } = await page.evaluate(() => {
     const links = Array.from(document.querySelectorAll("a"))
