@@ -19,13 +19,15 @@ async function triggerScraping(
   settings: CrawlerSettings
 ) {
   const maxConcurrent = 3;
-  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/scrape/process`;
 
   for (let i = 0; i < maxConcurrent; i++) {
     fetch(apiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ scrapingRunId, startUrl, settings }),
     }).catch(console.error);
@@ -42,8 +44,6 @@ export async function continueScraping(
     await triggerScraping(scrapingRunId, startUrl, settings);
   }
 }
-
-
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
@@ -289,14 +289,25 @@ export async function startDocuScraper(
     const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
+    const url = `${
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    }/api/scrape/start`;
     fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ scrapingRunId, startUrl, settings }),
     }).catch(console.error);
+
+    // const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
+    // fetch(url, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    // }).catch(console.error);
 
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
@@ -304,7 +315,6 @@ export async function startDocuScraper(
     return { success: false, error: "Failed to start scraping" };
   }
 }
-
 
 // export async function startDocuScraper(
 //   startUrl: string,
@@ -409,9 +419,7 @@ async function checkIfCancelled(
   return result.rows[0].count > 0;
 }
 
-async function getProcessingUrlsCount(
-  scrapingRunId: number
-): Promise<number> {
+async function getProcessingUrlsCount(scrapingRunId: number): Promise<number> {
   const result = await sql`
     SELECT COUNT(*) as count
     FROM scraping_url
