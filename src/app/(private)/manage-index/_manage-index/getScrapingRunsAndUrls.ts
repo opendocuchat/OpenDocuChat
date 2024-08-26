@@ -30,6 +30,7 @@ export async function getScrapingRunsAndUrls(dataSourceId: number) {
         id: row.run_id,
         data_source_id: dataSourceId,
         created_at: row.run_created_at,
+        status: row.run_status,
       });
       urlDetails[row.run_id] = [];
     }
@@ -39,7 +40,7 @@ export async function getScrapingRunsAndUrls(dataSourceId: number) {
         scraping_run_id: row.run_id,
         url: row.url,
         status: row.url_status,
-        content: "", // Note: content is not fetched here for efficiency
+        content: "",
         created_at: row.url_created_at,
         updated_at: row.url_updated_at,
       });
