@@ -61,5 +61,6 @@ export interface ScrapingUrl {
 export interface ScrapingRun {
   id: number;
   data_source_id: number;
+  status: ScrapingStatus;
   created_at: Date;
 }

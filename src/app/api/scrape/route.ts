@@ -7,7 +7,7 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 import { ScrapingStatus, ScrapingUrl } from "@/types/database";
 
-const MAX_CONCURRENT_PROCESSING = 3;
+const MAX_CONCURRENT_PROCESSING = 3
 
 interface CrawlerSettings {
   stayOnDomain: boolean;
@@ -36,74 +36,88 @@ async function scrapeUrlLoop(
   const startTime = Date.now();
   const pgClient = await db.connect();
 
-  const browser = await setupBrowser();
-  const page = await setupPage(browser);
+  let browser
+  let page
 
   const timeoutDuration = 45000;
 
   try {
-    // while (Date.now() - startTime < timeoutDuration) {
-    const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
-    if (isCancelled) {
-      console.log(
-        `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
+    while (Date.now() - startTime < timeoutDuration) {
+      const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
+      if (isCancelled) {
+        console.log(
+          `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
+        );
+        return;
+      }
+
+      const processingCount = await getProcessingUrlsCount(
+        pgClient,
+        scrapingRunId
       );
-      return;
+      if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+        console.log(
+          `Max concurrent processing reached. Stopping this scraper.`
+        );
+        return;
+      }
+
+      const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
+      if (!nextUrl) {
+        console.log(
+          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
+        );
+        return;
+      }
+
+      console.log("browser:", browser);
+      console.log("page:", page);
+      if (!page) {
+        browser = await setupBrowser();
+        if (!browser) {
+          throw new Error('Failed to set up browser');
+        }
+        page = await setupPage(browser);
+      }
+
+      const timeLeft = timeoutDuration - (Date.now() - startTime);
+      console.log(`Time left: ${timeLeft}ms`);
+      if (timeLeft <= 0) {
+        break;
+      }
+
+      try {
+        const scrapePromise = crawlUrl(nextUrl.url, page!, startUrl, settings);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Scraping timeout")), timeLeft)
+        );
+
+        const { links: discoveredUrls, content } = (await Promise.race([
+          scrapePromise,
+          timeoutPromise,
+        ])) as { links: string[]; content: string };
+
+        await Promise.all([
+          addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
+          updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
+          saveScrapedContent(pgClient, nextUrl.id, content),
+        ]);
+        console.log("Crawled URL successfully:", nextUrl.url);
+      } catch (error) {
+        console.error(
+          `Error or timeout while crawling URL ${nextUrl.url}:`,
+          error
+        );
+        await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
+      }
     }
-
-    const processingCount = await getProcessingUrlsCount(
-      pgClient,
-      scrapingRunId
-    );
-    if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-      console.log(`Max concurrent processing reached. Stopping this scraper.`);
-      return;
-    }
-
-    const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
-    if (!nextUrl) {
-      console.log(
-        `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
-      );
-      return;
-    }
-
-    const timeLeft = timeoutDuration - (Date.now() - startTime);
-    console.log(`Time left: ${timeLeft}ms`);
-    //   if (timeLeft <= 0) {
-    //     break;
-    //   }
-
-    try {
-      const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Scraping timeout")), timeLeft)
-      );
-
-      const { links: discoveredUrls, content } = (await Promise.race([
-        scrapePromise,
-        timeoutPromise,
-      ])) as { links: string[]; content: string };
-
-      await Promise.all([
-        addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
-        updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
-        saveScrapedContent(pgClient, nextUrl.id, content),
-      ]);
-      console.log("Crawled URL successfully:", nextUrl.url);
-    } catch (error) {
-      console.error(
-        `Error or timeout while crawling URL ${nextUrl.url}:`,
-        error
-      );
-      await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
-    }
-    // }
   } catch (error) {
     console.error("Crawling failed:", error);
   } finally {
     pgClient.release();
-    await browser.close();
+    if (browser) {
+        await browser.close();
+      }
   }
 }
 
@@ -262,10 +276,9 @@ async function crawlUrl(
 
   console.log(`Navigating to ${url}`);
 
-  await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
-  await page.waitForSelector("body", { timeout: 40000 });
+  await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 7000 });
+  await page.waitForSelector("body", { timeout: 7000 });
   await autoScroll(page);
-  await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
 
   const { links, content } = await page.evaluate(() => {
     const links = Array.from(document.querySelectorAll("a"))
