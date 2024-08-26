@@ -44,8 +44,10 @@ graph TD
 - - [X] Discover URLs to index
 - - [X] Basic crawler settings (stay on domain, subdomain, path)
 - - [X] Viewer for scraped page contents
+- - [ ] Trigger scraper from frontend to keep running on vercel (&window closing warning)
 - - [ ] Indicate failed scrape status & reason better
 - - [ ] Add selected URLs to index
+- - [ ] Split longer documents into smaller ones using LLM
 - - [ ] Fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
 
 **Querying**

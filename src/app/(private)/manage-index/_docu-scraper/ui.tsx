@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  startDocuScraper,
+  startScrapingRun,
   cancelScrapingRun,
   fetchScrapingResultsAndStatus,
+  startScraper,
 } from "./actions";
 import UrlTree, { UrlTreeNode } from "./url-tree";
 
@@ -48,7 +49,7 @@ export default function DocuScraper() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await startDocuScraper(url, crawlSettings);
+      const result = await startScrapingRun(url, crawlSettings);
       if ("success" in result && result.success && "scrapingRunId" in result) {
         const scrapingRunId = result.scrapingRunId as number | null;
         setScrapingRunId(scrapingRunId);
@@ -101,15 +102,20 @@ export default function DocuScraper() {
   };
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let fetchIntervalId: NodeJS.Timeout;
+    let scrapeIntervalId: NodeJS.Timeout;
 
     if (scrapingRunId && isLoading) {
+      console.log("Fetching results & starting scraper...");
       fetchResults();
-      intervalId = setInterval(fetchResults, 5000);
+      startScraper(scrapingRunId, url, crawlSettings);
+      fetchIntervalId = setInterval(fetchResults, 5000);
+      scrapeIntervalId = setInterval(() => startScraper(scrapingRunId, url, crawlSettings), 10000);
     }
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (fetchIntervalId) clearInterval(fetchIntervalId);
+      if (scrapeIntervalId) clearInterval(scrapeIntervalId);
     };
   }, [scrapingRunId, isLoading]);
 

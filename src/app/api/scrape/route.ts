@@ -1,4 +1,4 @@
-// app/api/scrape/process/route.ts
+// app/api/scrape/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, VercelPoolClient } from "@vercel/postgres";
@@ -16,10 +16,10 @@ interface CrawlerSettings {
 }
 
 export async function POST(request: NextRequest) {
-  console.log("Scraping process started");
+  console.log("api/scrape called");
   const { scrapingRunId, startUrl, settings } = await request.json();
 
-  await scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
+  await scrapeUrlLoop(scrapingRunId, startUrl, settings).catch(console.error);
 
   return NextResponse.json({
     success: true,
@@ -115,28 +115,27 @@ async function getNextUrlToCrawl(
   return result.rows[0] || null;
 }
 
-async function scrapeUrlsBatch(
+async function scrapeUrlLoop(
   scrapingRunId: number,
   startUrl: string,
   settings: any
 ) {
   const startTime = Date.now();
   const pgClient = await db.connect();
+     
   const browser = await setupBrowser();
   const page = await setupPage(browser);
 
-  const timeoutDuration = 40000;
+  const timeoutDuration = 45000;
 
   try {
     while (Date.now() - startTime < timeoutDuration) {
-      console.log("Starting another scrapeUrlsBatch loop");
 
       const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
       if (isCancelled) {
         console.log(
           `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
         );
-        await browser.close();
         return;
       }
 
@@ -148,7 +147,6 @@ async function scrapeUrlsBatch(
         console.log(
           `Max concurrent processing reached. Stopping this scraper.`
         );
-        await browser.close();
         return;
       }
 
@@ -157,14 +155,7 @@ async function scrapeUrlsBatch(
         console.log(
           `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
         );
-        await browser.close();
         return;
-      }
-
-      if (processingCount < MAX_CONCURRENT_PROCESSING - 1) {
-        console.log("Triggering additional scraper");
-        triggerScraper(scrapingRunId, startUrl, settings);
-        // scrapeUrlsBatch(scrapingRunId, startUrl, settings).catch(console.error);
       }
 
       const timeLeft = timeoutDuration - (Date.now() - startTime);
@@ -172,8 +163,9 @@ async function scrapeUrlsBatch(
       if (timeLeft <= 0) {
         break;
       }
-
+      
       try {
+
         const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Scraping timeout")), timeLeft)
@@ -196,36 +188,13 @@ async function scrapeUrlsBatch(
           error
         );
         await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
-        await browser.close();
       }
     }
-    triggerScraper(scrapingRunId, startUrl, settings);
   } catch (error) {
     console.error("Crawling failed:", error);
   } finally {
     pgClient.release();
     await browser.close();
-  }
-}
-
-async function triggerScraper(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
-  try {
-    const url = `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/scrape/start`;
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    }).catch(console.error);
-  } catch (error) {
-    console.error("Crawling failed:", error);
   }
 }
 
@@ -341,76 +310,6 @@ async function crawlUrl(
 
   return { links: indexableLinks, content };
 }
-
-// async function crawlUrlWithRetry(
-//   url: string,
-//   page: Page,
-//   startUrl: string,
-//   settings: CrawlerSettings,
-//   maxRetries = 3
-// ): Promise<{ links: string[]; content: string }> {
-//   const baseUrl = getBaseUrl(startUrl);
-//   const basePath = getBasePath(startUrl);
-
-//   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-//     try {
-//       console.log(`Attempt ${attempt}: Navigating to ${url}`);
-
-//       await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 40000 });
-//       await page.waitForSelector("body", { timeout: 40000 });
-//       await autoScroll(page);
-//       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
-
-//       const { links, content } = await page.evaluate(() => {
-//         const links = Array.from(document.querySelectorAll("a"))
-//           .map((a) => a.href)
-//           .filter((href) => href.startsWith("http"));
-
-//         const extractVisibleText = (node: Node): string => {
-//           if (node.nodeType === Node.TEXT_NODE) {
-//             return node.textContent?.trim() || "";
-//           }
-//           if (node.nodeType !== Node.ELEMENT_NODE) {
-//             return "";
-//           }
-//           const element = node as Element;
-//           const style = window.getComputedStyle(element);
-//           if (style.display === "none" || style.visibility === "hidden") {
-//             return "";
-//           }
-//           return Array.from(element.childNodes)
-//             .map(extractVisibleText)
-//             .join(" ")
-//             .trim();
-//         };
-
-//         const content = extractVisibleText(document.body);
-
-//         return { links, content };
-//       });
-
-//       const uniqueLinks = Array.from(new Set(links));
-
-//       const indexableLinks = uniqueLinks
-//         .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
-//         .map((link) => {
-//           const url = new URL(link);
-//           url.hash = "";
-//           return url.toString();
-//         });
-
-//       return { links: indexableLinks, content };
-//     } catch (error) {
-//       console.error(`Error crawling ${url} (Attempt ${attempt}):`, error);
-//       if (attempt === maxRetries) {
-//         console.error(`Max retries reached for ${url}`);
-//         return { links: [], content: "" };
-//       }
-//       await new Promise((resolve) => globalThis.setTimeout(resolve, 3000));
-//     }
-//   }
-//   return { links: [], content: "" };
-// }
 
 async function autoScroll(page: Page): Promise<void> {
   await page.evaluate(async () => {

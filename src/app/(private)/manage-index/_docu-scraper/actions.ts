@@ -110,7 +110,7 @@ function isIndexableUrl(
   }
 }
 
-export async function startDocuScraper(
+export async function startScrapingRun(
   startUrl: string,
   settings: CrawlerSettings
 ) {
@@ -120,19 +120,21 @@ export async function startDocuScraper(
   console.log(`Starting scraper with start URL: ${startUrl}`);
 
   try {
-    const { scrapingRunId, dataSourceId } = await createScrapingRun(startUrl);
+    const { scrapingRunId, dataSourceId } = await createScrapingRunInDb(startUrl);
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    const url = `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/scrape/start`;
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    }).catch(console.error);
+    startScraper(scrapingRunId, startUrl, settings);
+
+    // const url = `${
+    //   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    // }/api/scrape/start`;
+    // fetch(url, {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    // }).catch(console.error);
 
     // const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
     // fetch(url, {
@@ -150,7 +152,28 @@ export async function startDocuScraper(
   }
 }
 
-async function createScrapingRun(url: string) {
+export async function startScraper(
+  scrapingRunId: number,
+  startUrl: string,
+  settings: CrawlerSettings
+) {
+  try {
+    const url = `${
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    }/api/scrape`;
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
+    }).catch(console.error);
+  } catch (error) {
+    console.error("Crawling failed:", error);
+  }
+}
+
+async function createScrapingRunInDb(url: string) {
   try {
     const dataSource = await getOrCreateDataSource(url, "docu_scrape");
     const result = await sql`
