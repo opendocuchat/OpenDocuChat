@@ -11,34 +11,11 @@ import {
 } from "@/types/database";
 import { UrlTreeNode } from "./url-tree";
 
-async function triggerScraping(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
-  const maxConcurrent = 3;
-  const apiUrl = `${
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-  }/api/scrape/process`;
-
-  for (let i = 0; i < maxConcurrent; i++) {
-    fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    }).catch(console.error);
-  }
-}
-
 interface CrawlerSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
   excludeFileTypes: string[];
 }
-
-const MAX_CONCURRENT_PROCESSING = 3;
 
 async function getOrCreateDataSource(
   url: string,
@@ -64,49 +41,23 @@ async function getOrCreateDataSource(
   return newResult.rows[0];
 }
 
+
 export async function cancelScrapingRun(scrapingRunId: number) {
   try {
     await sql`
-        UPDATE scraping_url
-        SET status = ${ScrapingStatus.CANCELLED}
-        WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
-      `;
+      UPDATE scraping_run
+      SET status = ${ScrapingStatus.CANCELLED}
+      WHERE id = ${scrapingRunId}
+    `;
+    // await sql`
+    //   UPDATE scraping_url
+    //   SET status = ${ScrapingStatus.CANCELLED}
+    //   WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+    // `;
     return { success: true };
   } catch (error) {
     console.error("Error stopping scraper:", error);
     return { success: false, error: "Failed to stop scraping" };
-  }
-}
-
-function isIndexableUrl(
-  url: string,
-  baseUrl: string,
-  basePath: string,
-  settings: CrawlerSettings
-): boolean {
-  try {
-    const linkUrl = new URL(url);
-    const baseUrlObj = new URL(baseUrl);
-
-    if (settings.excludeFileTypes && settings.excludeFileTypes.length > 0) {
-      const extension = linkUrl.pathname.split(".").pop()?.toLowerCase();
-      if (extension && settings.excludeFileTypes.includes(extension)) {
-        return false;
-      }
-    }
-
-    if (settings.stayOnDomain && linkUrl.hostname !== baseUrlObj.hostname) {
-      return false;
-    }
-
-    if (settings.stayOnPath && !linkUrl.pathname.startsWith(basePath)) {
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error(`Invalid URL: ${url}`);
-    return false;
   }
 }
 
@@ -117,33 +68,14 @@ export async function startScrapingRun(
   if (!startUrl) {
     throw new Error("Invalid input");
   }
-  console.log(`Starting scraper with start URL: ${startUrl}`);
 
   try {
-    const { scrapingRunId, dataSourceId } = await createScrapingRunInDb(startUrl);
+    const { scrapingRunId, dataSourceId } = await createScrapingRunInDb(
+      startUrl
+    );
     await addUrlToScrape(scrapingRunId, startUrl);
 
     startScraper(scrapingRunId, startUrl, settings);
-
-    // const url = `${
-    //   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    // }/api/scrape/start`;
-    // fetch(url, {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    // }).catch(console.error);
-
-    // const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scrape/process`;
-    // fetch(url, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    // }).catch(console.error);
 
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
@@ -177,11 +109,10 @@ async function createScrapingRunInDb(url: string) {
   try {
     const dataSource = await getOrCreateDataSource(url, "docu_scrape");
     const result = await sql`
-      INSERT INTO scraping_run (data_source_id)
-      VALUES (${dataSource.id})
+      INSERT INTO scraping_run (data_source_id, status)
+        VALUES (${dataSource.id}, 'PROCESSING')
       RETURNING id
     `;
-    console.log(`Scraping run created with ID: ${result.rows[0].id}`);
     return { scrapingRunId: result.rows[0].id, dataSourceId: dataSource.id };
   } catch (e) {
     console.error("Error creating scraping run:", e);
