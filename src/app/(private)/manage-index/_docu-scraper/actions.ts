@@ -11,7 +11,7 @@ import {
 } from "@/types/database";
 import { UrlTreeNode } from "./url-tree";
 
-interface CrawlerSettings {
+export interface CrawlerSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
   excludeFileTypes: string[];
@@ -89,6 +89,7 @@ export async function startScraper(
   startUrl: string,
   settings: CrawlerSettings
 ) {
+  console.log("settings", settings);
   try {
     const url = `${
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"

@@ -11,8 +11,10 @@ import {
   cancelScrapingRun,
   fetchScrapingResultsAndStatus,
   startScraper,
+  CrawlerSettings,
 } from "./actions";
 import UrlTree, { UrlTreeNode } from "./url-tree";
+import { Slider } from "@/components/ui/slider";
 
 export default function DocuScraper() {
   const [url, setUrl] = useState("");
@@ -20,6 +22,7 @@ export default function DocuScraper() {
     stayOnDomain: true,
     stayOnPath: true,
     excludeFileTypes: ["jpg", "jpeg", "png", "gif", "mov", "mp4", "mp3"],
+    maxParallelScrapers: 3,
   });
   const [scrapingRunId, setScrapingRunId] = useState<number | null>(null);
   const [treeData, setTreeData] = useState<UrlTreeNode | null>(null);
@@ -110,14 +113,17 @@ export default function DocuScraper() {
       fetchResults();
       startScraper(scrapingRunId, url, crawlSettings);
       fetchIntervalId = setInterval(fetchResults, 3000);
-      scrapeIntervalId = setInterval(() => startScraper(scrapingRunId, url, crawlSettings), 15000);
+      scrapeIntervalId = setInterval(
+        () => startScraper(scrapingRunId, url, { ...crawlSettings }),
+        10000
+      );
     }
 
     return () => {
       if (fetchIntervalId) clearInterval(fetchIntervalId);
       if (scrapeIntervalId) clearInterval(scrapeIntervalId);
     };
-  }, [scrapingRunId, isLoading]);
+  }, [scrapingRunId, isLoading, crawlSettings]);
 
   const handleSelectionChange = (selectedPaths: string[]) => {
     console.log("Selected paths:", selectedPaths);
@@ -126,6 +132,18 @@ export default function DocuScraper() {
 
   const handleIndexSelectedUrls = () => {
     // TODO handle indexing
+  };
+
+  useEffect(() => {
+    if (isLoading) {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+    } else {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+  }, [isLoading]);
+
+  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    event.preventDefault();
   };
 
   return (
@@ -219,6 +237,27 @@ export default function DocuScraper() {
                     className="mt-1"
                   />
                 </div>
+
+                <Label>Parallel Scrapers</Label>
+                <div className="flex items-center">
+                  <Slider
+                    defaultValue={[crawlSettings.maxParallelScrapers]}
+                    max={10}
+                    step={1}
+                    onChange={(e) => {
+                      setCrawlSettings({
+                        ...crawlSettings,
+                        maxParallelScrapers: (e as unknown as number[])[0],
+                      });
+                    }}
+                  />
+                  <span className="ml-2 text-sm">
+                    {crawlSettings.maxParallelScrapers}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Adjust the number of scrapers that can run in parallel.
+                </p>
               </div>
 
               {error && <p className="text-red-500 mt-2">{error}</p>}
@@ -229,7 +268,12 @@ export default function DocuScraper() {
             <Card>
               <CardHeader>
                 <CardTitle>Select URLs for indexing</CardTitle>
-                {isLoading && <p>Discovering URLs... Please wait.</p>}
+                {isLoading && (
+                  <p className="text-lg text-red-500">
+                    Discovering URLs... Please wait. Do NOT close or reload this
+                    window, or the scraper will stop.
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <Button onClick={handleIndexSelectedUrls}>
@@ -237,7 +281,10 @@ export default function DocuScraper() {
                 </Button>
 
                 {isLoading && (
-                  <Button onClick={handleCancelScrapingRun} className="mb-4">
+                  <Button
+                    onClick={handleCancelScrapingRun}
+                    className="mb-4 ml-4"
+                  >
                     Cancel Scraping Run
                   </Button>
                 )}

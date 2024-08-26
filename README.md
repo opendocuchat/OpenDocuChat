@@ -36,20 +36,21 @@ graph TD
 - [x] Test Together AI / Replica AI setup
 
 **Indexing**
-- [ ] Public Repo
-- - [X] Analyze repo size and projected embedding costs
-- - [ ] Index all
-- - [ ] Index subset (include/exclude logic)
 - [ ] Scrape Documentation Website
 - - [X] Discover URLs to index
 - - [X] Basic crawler settings (stay on domain, subdomain, path)
 - - [X] Viewer for scraped page contents
 - - [X] Trigger scraper from frontend to keep running on vercel (&window closing warning)
-- - [ ] Improve cancellation & completion logic
+- - [X] Improve cancellation & completion logic
+- - [ ] Warn that window reload cancels scraping
 - - [ ] Indicate failed scrape status & reason better
 - - [ ] Add selected URLs to index
 - - [ ] Split longer documents into smaller ones using LLM
 - - [ ] Fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
+- [ ] Public Repo
+- - [X] Analyze repo size and projected embedding costs
+- - [ ] Index all
+- - [ ] Index subset (include/exclude logic)
 
 **Querying**
 - [ ] Boost certain files/folders

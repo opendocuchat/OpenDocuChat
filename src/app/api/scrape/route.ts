@@ -7,12 +7,11 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 import { ScrapingStatus, ScrapingUrl } from "@/types/database";
 
-const MAX_CONCURRENT_PROCESSING = 2;
-
-interface CrawlerSettings {
+interface CrawlSettings {
   stayOnDomain: boolean;
   stayOnPath: boolean;
   excludeFileTypes: string[];
+  maxParallelScrapers: number;
 }
 
 export const maxDuration = 60;
@@ -53,7 +52,7 @@ async function scrapeUrlLoop(
         pgClient,
         scrapingRunId
       );
-      if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+      if (processingCount >= settings.maxParallelScrapers) {
         return;
       }
 
@@ -257,7 +256,7 @@ async function scrapeUrl(
   url: string,
   page: Page,
   startUrl: string,
-  settings: CrawlerSettings
+  settings: CrawlSettings
 ): Promise<{ links: string[]; content: string }> {
   const baseUrl = getBaseUrl(startUrl);
   const basePath = getBasePath(startUrl);
@@ -332,7 +331,7 @@ function isIndexableUrl(
   url: string,
   baseUrl: string,
   basePath: string,
-  settings: CrawlerSettings
+  settings: CrawlSettings
 ): boolean {
   try {
     const linkUrl = new URL(url);
