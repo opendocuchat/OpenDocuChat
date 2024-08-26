@@ -15,6 +15,10 @@ interface CrawlerSettings {
   excludeFileTypes: string[];
 }
 
+export const config = {
+    maxDuration: 60,
+  };  
+
 export async function POST(request: NextRequest) {
   console.log("api/scrape called");
   const { scrapingRunId, startUrl, settings } = await request.json();
