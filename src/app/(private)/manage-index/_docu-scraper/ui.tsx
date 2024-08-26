@@ -109,8 +109,8 @@ export default function DocuScraper() {
       console.log("Fetching results & starting scraper...");
       fetchResults();
       startScraper(scrapingRunId, url, crawlSettings);
-      fetchIntervalId = setInterval(fetchResults, 5000);
-      scrapeIntervalId = setInterval(() => startScraper(scrapingRunId, url, crawlSettings), 10000);
+      fetchIntervalId = setInterval(fetchResults, 3000);
+      scrapeIntervalId = setInterval(() => startScraper(scrapingRunId, url, crawlSettings), 15000);
     }
 
     return () => {

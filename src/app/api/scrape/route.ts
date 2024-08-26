@@ -15,12 +15,9 @@ interface CrawlerSettings {
   excludeFileTypes: string[];
 }
 
-export const config = {
-    maxDuration: 60,
-  };  
+export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
-  console.log("api/scrape called");
   const { scrapingRunId, startUrl, settings } = await request.json();
 
   await scrapeUrlLoop(scrapingRunId, startUrl, settings).catch(console.error);
@@ -46,63 +43,61 @@ async function scrapeUrlLoop(
 
   try {
     // while (Date.now() - startTime < timeoutDuration) {
-      const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
-      if (isCancelled) {
-        console.log(
-          `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
-        );
-        return;
-      }
-
-      const processingCount = await getProcessingUrlsCount(
-        pgClient,
-        scrapingRunId
+    const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
+    if (isCancelled) {
+      console.log(
+        `Scraping run ${scrapingRunId} has been cancelled. Stopping this scraper.`
       );
-      if (processingCount >= MAX_CONCURRENT_PROCESSING) {
-        console.log(
-          `Max concurrent processing reached. Stopping this scraper.`
-        );
-        return;
-      }
+      return;
+    }
 
-      const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
-      if (!nextUrl) {
-        console.log(
-          `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
-        );
-        return;
-      }
+    const processingCount = await getProcessingUrlsCount(
+      pgClient,
+      scrapingRunId
+    );
+    if (processingCount >= MAX_CONCURRENT_PROCESSING) {
+      console.log(`Max concurrent processing reached. Stopping this scraper.`);
+      return;
+    }
 
-      const timeLeft = timeoutDuration - (Date.now() - startTime);
-      console.log(`Time left: ${timeLeft}ms`);
+    const nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
+    if (!nextUrl) {
+      console.log(
+        `No more URLs to crawl for run ${scrapingRunId}. Stopping this scraper.`
+      );
+      return;
+    }
+
+    const timeLeft = timeoutDuration - (Date.now() - startTime);
+    console.log(`Time left: ${timeLeft}ms`);
     //   if (timeLeft <= 0) {
     //     break;
     //   }
 
-      try {
-        const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Scraping timeout")), timeLeft)
-        );
+    try {
+      const scrapePromise = crawlUrl(nextUrl.url, page, startUrl, settings);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Scraping timeout")), timeLeft)
+      );
 
-        const { links: discoveredUrls, content } = (await Promise.race([
-          scrapePromise,
-          timeoutPromise,
-        ])) as { links: string[]; content: string };
+      const { links: discoveredUrls, content } = (await Promise.race([
+        scrapePromise,
+        timeoutPromise,
+      ])) as { links: string[]; content: string };
 
-        await Promise.all([
-          addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
-          updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
-          saveScrapedContent(pgClient, nextUrl.id, content),
-        ]);
-        console.log("Crawled URL successfully:", nextUrl.url);
-      } catch (error) {
-        console.error(
-          `Error or timeout while crawling URL ${nextUrl.url}:`,
-          error
-        );
-        await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
-      }
+      await Promise.all([
+        addUrlsToScrape(pgClient, scrapingRunId, discoveredUrls),
+        updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.COMPLETED),
+        saveScrapedContent(pgClient, nextUrl.id, content),
+      ]);
+      console.log("Crawled URL successfully:", nextUrl.url);
+    } catch (error) {
+      console.error(
+        `Error or timeout while crawling URL ${nextUrl.url}:`,
+        error
+      );
+      await updateUrlStatus(pgClient, nextUrl.id, ScrapingStatus.QUEUED);
+    }
     // }
   } catch (error) {
     console.error("Crawling failed:", error);
