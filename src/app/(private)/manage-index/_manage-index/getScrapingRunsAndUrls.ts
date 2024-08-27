@@ -43,6 +43,7 @@ export async function getScrapingRunsAndUrls(dataSourceId: number) {
         content: "",
         created_at: row.url_created_at,
         updated_at: row.url_updated_at,
+        is_indexed: false,
       });
     }
   });
