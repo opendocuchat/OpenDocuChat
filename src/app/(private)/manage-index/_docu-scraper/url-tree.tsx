@@ -7,7 +7,7 @@ import { fetchUrlContent } from "./actions";
 
 interface UrlTreeProps {
   tree: UrlTreeNode;
-  onSelectionChange: (selectedPaths: string[]) => void;
+  onSelectionChange: (selectedPaths: { url: string; id: number }[]) => void;
   isLoading: boolean;
 }
 
@@ -60,13 +60,27 @@ const UrlTree: React.FC<UrlTreeProps> = ({
     }
   };
 
+  const canNodeBeSelected = (node: UrlTreeNode): boolean => {
+    if (node.status === ScrapingStatus.COMPLETED) return true;
+    if (node.children && node.children.length > 0) {
+      return node.children.some(canNodeBeSelected);
+    }
+    return false;
+  };
+
   const handleCheckboxChange = (path: string, checked: boolean) => {
     const updateNodeAndChildren = (node: UrlTreeNode): UrlTreeNode => {
       if (node.path.startsWith(path)) {
+        const canSelect = canNodeBeSelected(node);
         return {
           ...node,
-          selected: checked,
-          children: node.children?.map(updateNodeAndChildren),
+          selected: canSelect ? checked : false,
+          children: node.children?.map((child) =>
+            updateNodeAndChildren({
+              ...child,
+              selected: canSelect ? checked : child.selected,
+            })
+          ),
         };
       }
       if (node.children) {
@@ -142,7 +156,7 @@ const UrlTree: React.FC<UrlTreeProps> = ({
             onCheckedChange={(checked) =>
               handleCheckboxChange(node.path, Boolean(checked))
             }
-            disabled={isLoading}
+            disabled={isLoading || !canNodeBeSelected(node)}
           />
           <label htmlFor={node.path} className="ml-2 truncate">
             {node.path === "" ? "/" : `${node.name.split(" (")[0]}`}
@@ -185,10 +199,12 @@ const UrlTree: React.FC<UrlTreeProps> = ({
     </div>
   );
 
-  const getSelectedPaths = (node: UrlTreeNode): string[] => {
-    let paths: string[] = [];
-    if (node.selected) {
-      paths.push(node.path);
+  const getSelectedPaths = (
+    node: UrlTreeNode
+  ): { url: string; id: number }[] => {
+    let paths: { url: string; id: number }[] = [];
+    if (node.selected && node.scrapeUrlId) {
+      paths.push({ url: node.path, id: node.scrapeUrlId });
     }
     if (node.children) {
       node.children.forEach((child) => {

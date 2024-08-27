@@ -42,9 +42,10 @@ graph TD
 - - [X] Viewer for scraped page contents
 - - [X] Trigger scraper from frontend to keep running on vercel (&window closing warning)
 - - [X] Improve cancellation & completion logic
-- - [ ] Warn that window reload cancels scraping
-- - [ ] Indicate failed scrape status & reason better
-- - [ ] Add selected URLs to index
+- - [ ] Add selected URLs to index, with cost estimate
+- - [ ] Make JS rendering optional setting
+- - [ ] Save links and page hierarchy in content
+- - [ ] Add background updates with cron jobs
 - - [ ] Split longer documents into smaller ones using LLM
 - - [ ] Fragment/hash indexing/navigation for improved accuracy, especially on large pages (currently fragments are ignored)
 - [ ] Public Repo
@@ -54,6 +55,12 @@ graph TD
 
 **Querying**
 - [ ] Boost certain files/folders
+
+**Querying**
+- [ ] Add chatbubble
+- [ ] Implement basic llama model
+- [ ] Implement llama with citations
+- [ ] Add full screen chat
 
 **Auth**
 - [x] set up auth.js with github oauth

@@ -41,7 +41,6 @@ async function getOrCreateDataSource(
   return newResult.rows[0];
 }
 
-
 export async function cancelScrapingRun(scrapingRunId: number) {
   try {
     await sql`
@@ -49,11 +48,11 @@ export async function cancelScrapingRun(scrapingRunId: number) {
       SET status = ${ScrapingStatus.CANCELLED}
       WHERE id = ${scrapingRunId}
     `;
-    // await sql`
-    //   UPDATE scraping_url
-    //   SET status = ${ScrapingStatus.CANCELLED}
-    //   WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
-    // `;
+    await sql`
+      UPDATE scraping_url
+      SET status = ${ScrapingStatus.CANCELLED}
+      WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.QUEUED}
+    `;
     return { success: true };
   } catch (error) {
     console.error("Error stopping scraper:", error);
@@ -89,7 +88,6 @@ export async function startScraper(
   startUrl: string,
   settings: CrawlerSettings
 ) {
-  console.log("settings", settings);
   try {
     const url = `${
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"

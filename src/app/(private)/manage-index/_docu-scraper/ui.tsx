@@ -15,6 +15,7 @@ import {
 } from "./actions";
 import UrlTree, { UrlTreeNode } from "./url-tree";
 import { Slider } from "@/components/ui/slider";
+import IndexingUi from "../_indexing/ui";
 
 export default function DocuScraper() {
   const [url, setUrl] = useState("");
@@ -22,7 +23,7 @@ export default function DocuScraper() {
     stayOnDomain: true,
     stayOnPath: true,
     excludeFileTypes: ["jpg", "jpeg", "png", "gif", "mov", "mp4", "mp3"],
-    maxParallelScrapers: 3,
+    maxParallelScrapers: 2,
   });
   const [scrapingRunId, setScrapingRunId] = useState<number | null>(null);
   const [treeData, setTreeData] = useState<UrlTreeNode | null>(null);
@@ -31,6 +32,22 @@ export default function DocuScraper() {
   const [excludeFileTypesInput, setExcludeFileTypesInput] = useState(
     crawlSettings.excludeFileTypes.join(", ")
   );
+  const [selectedUrls, setSelectedUrls] = useState<
+    { url: string; id: number }[]
+  >([]);
+  const [showIndexingUI, setShowIndexingUI] = useState(false);
+
+  const handleSelectionChange = (
+    selectedPaths: { url: string; id: number }[]
+  ) => {
+    console.log("Selected paths:", selectedPaths);
+    setSelectedUrls(selectedPaths);
+  };
+
+  const handleIndexingComplete = () => {
+    console.log("Indexing completed");
+    setShowIndexingUI(false);
+  };
 
   const handleExcludeFileTypesChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -124,15 +141,6 @@ export default function DocuScraper() {
       if (scrapeIntervalId) clearInterval(scrapeIntervalId);
     };
   }, [scrapingRunId, isLoading, crawlSettings]);
-
-  const handleSelectionChange = (selectedPaths: string[]) => {
-    console.log("Selected paths:", selectedPaths);
-    // TODO handle selection for indexing
-  };
-
-  const handleIndexSelectedUrls = () => {
-    // TODO handle indexing
-  };
 
   useEffect(() => {
     if (isLoading) {
@@ -268,16 +276,23 @@ export default function DocuScraper() {
             <Card>
               <CardHeader>
                 <CardTitle>Select URLs for indexing</CardTitle>
-                {isLoading && (
-                  <p className="text-lg text-red-500">
+                {isLoading ? (
+                  <p className="text-lg text-orange-500">
                     Discovering URLs... Please wait. Do NOT close or reload this
                     window, or the scraper will stop.
+                  </p>
+                ) : (
+                  <p className="text-lg text-emerald-500">
+                    Please select the URLs you want to add to your chatbot index
                   </p>
                 )}
               </CardHeader>
               <CardContent>
-                <Button onClick={handleIndexSelectedUrls}>
-                  Add selected URLs to Index
+                <Button
+                  onClick={() => setShowIndexingUI(true)}
+                  disabled={selectedUrls.length === 0 || isLoading}
+                >
+                  Proceed to Indexing
                 </Button>
 
                 {isLoading && (
@@ -295,6 +310,12 @@ export default function DocuScraper() {
                 />
               </CardContent>
             </Card>
+          )}
+          {showIndexingUI && (
+            <IndexingUi
+              selectedUrlIds={selectedUrls.map((u) => u.id)}
+              onIndexingComplete={handleIndexingComplete}
+            />
           )}
         </CardContent>
       </Card>
