@@ -35,7 +35,7 @@
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
     "together-ai": "^0.6.0-alpha.4",
-    "vercel": "^37.1.0"
+    "vercel": "^37.1.2"
   },
   "devDependencies": {
     "@types/node": "^20",

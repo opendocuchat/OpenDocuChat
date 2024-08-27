@@ -36,13 +36,14 @@ graph TD
 - [x] Test Together AI / Replica AI setup
 
 **Indexing**
-- [ ] Scrape Documentation Website
+- [X] Scrape Documentation Website
 - - [X] Discover URLs to index
 - - [X] Basic crawler settings (stay on domain, subdomain, path)
 - - [X] Viewer for scraped page contents
 - - [X] Trigger scraper from frontend to keep running on vercel (&window closing warning)
 - - [X] Improve cancellation & completion logic
 - - [X] Add selected URLs to index, with cost estimate
+- - [ ] Add cleanup function for stuck scrapers
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs
@@ -58,13 +59,14 @@ graph TD
 - [ ] Use reranker
 
 **Response**
-- [ ] Add chatbubble
+- [X] Add chat widget
 - [ ] Implement basic llama model
 - [ ] Implement llama with citations
 - [ ] Add full screen chat
 
 **Auth**
 - [x] set up auth.js with github oauth
+- [ ] Enforce auth on (private) pages via middleware
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] use db table to verify which users have access
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
