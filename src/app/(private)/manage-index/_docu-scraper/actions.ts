@@ -127,8 +127,8 @@ async function addUrlToScrape(scrapingRunId: number, url: string) {
 
   if (existingUrl.rows.length === 0) {
     await sql`
-        INSERT INTO scraping_url (scraping_run_id, url, status)
-        VALUES (${scrapingRunId}, ${url}, ${ScrapingStatus.QUEUED})
+        INSERT INTO scraping_url (scraping_run_id, url, status, is_indexed)
+        VALUES (${scrapingRunId}, ${url}, ${ScrapingStatus.QUEUED}, false)
       `;
   }
 }

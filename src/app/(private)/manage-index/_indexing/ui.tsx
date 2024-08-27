@@ -26,6 +26,7 @@ export default function IndexingUI({
   const [isIndexing, setIsIndexing] = useState(false);
   const [progress, setProgress] = useState<IndexingProgress | null>(null);
   const [costEstimate, setCostEstimate] = useState<number | null>(null);
+  const [tokenEstimate, setTokenEstimate] = useState<number | null>(null);
 
   useEffect(() => {
     if (selectedUrlIds.length > 0) {
@@ -44,9 +45,10 @@ export default function IndexingUI({
 
     try {
       const totalTokens = await getUrlContentTokenCount(selectedUrlIds);
-      const estimatedCost = (totalTokens / 1000*1000) * COST_PER_1M_TOKENS;
+      const estimatedCost = (totalTokens / 1000000) * COST_PER_1M_TOKENS;
 
       setCostEstimate(estimatedCost);
+      setTokenEstimate(totalTokens);
       setProgress((prev) => ({
         ...prev!,
         stage: "completed",
@@ -88,9 +90,14 @@ export default function IndexingUI({
         {isEstimating ? (
           <p>Estimating cost...</p>
         ) : costEstimate !== null ? (
-          <p className="mb-2">
+          <div className="mb-2">
+          <p>
             Estimated indexing cost: ${costEstimate.toFixed(4)}
           </p>
+          <p >
+            Estimated tokens: {tokenEstimate}
+          </p>
+          </div>
         ) : null}
         <Button
           onClick={handleIndexSelectedUrls}

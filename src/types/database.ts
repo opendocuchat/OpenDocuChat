@@ -53,6 +53,7 @@ export interface ScrapingUrl {
   scraping_run_id: number;
   url: string;
   status: ScrapingStatus;
+  is_indexed: boolean;
   content: string;
   created_at: Date;
   updated_at: Date;
