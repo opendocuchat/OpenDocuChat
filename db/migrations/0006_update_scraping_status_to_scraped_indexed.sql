@@ -1,4 +1,4 @@
-ALTER TYPE ScrapingStatus RENAME VALUE 'COMPLETED' TO 'SCRAPED';
+ALTER TYPE scraping_status RENAME VALUE 'COMPLETED' TO 'SCRAPED';
 
 UPDATE scraping_url
 SET status = 'SCRAPED'
@@ -8,4 +8,4 @@ UPDATE scraping_run
 SET status = 'SCRAPED'
 WHERE status = 'COMPLETED';
 
-ALTER TYPE ScrapingStatus ADD VALUE 'INDEXED';
+ALTER TYPE scraping_status ADD VALUE 'INDEXED';
