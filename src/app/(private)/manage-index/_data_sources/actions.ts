@@ -1,7 +1,13 @@
+// app/(private)/manage-index/_data_sources/actions.ts
 "use server";
 
+import { DataSource, ScrapingRun, ScrapingUrl } from "@/types/database";
 import { sql } from "@vercel/postgres";
-import { ScrapingRun, ScrapingUrl } from "@/types/database";
+
+export async function getDataSources() {
+  const dataSources = await sql<DataSource>`SELECT * FROM data_source`;
+  return dataSources.rows;
+}
 
 export async function getScrapingRunsAndUrls(dataSourceId: number) {
   const result = await sql`

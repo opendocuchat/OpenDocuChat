@@ -1,3 +1,4 @@
+// app/(private)/manage-index/_docu-scraper/url-tree.tsx
 import React, { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrapingStatus } from "@/types/database";

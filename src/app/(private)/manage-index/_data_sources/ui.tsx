@@ -20,7 +20,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { getDataSources } from "./getDataSources";
 import {
   DataSource,
   ScrapingRun,
@@ -30,9 +29,9 @@ import {
 import { useState, useCallback } from "react";
 import UrlTree, { UrlTreeNode } from "../_docu-scraper/url-tree";
 import { fetchScrapingResultsAndStatus } from "../_docu-scraper/actions";
-import { getScrapingRunsAndUrls } from "./getScrapingRunsAndUrls";
+import { getDataSources, getScrapingRunsAndUrls } from "./actions";
 
-export default function ManageIndex() {
+export default function DataSources() {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [isLoadingDataSources, setIsLoadingDataSources] = useState(false);
   const [selectedDataSource, setSelectedDataSource] =
@@ -106,7 +105,7 @@ export default function ManageIndex() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>View & Manage Index</CardTitle>
+        <CardTitle>View Data Sources</CardTitle>
       </CardHeader>
       <CardContent>
         <Button
@@ -114,7 +113,7 @@ export default function ManageIndex() {
           disabled={isLoadingDataSources}
           className="mb-4"
         >
-          Show Data Sources
+          Load Data Sources
           {isLoadingDataSources ? (
             <Loader2 className="h-4 w-4 animate-spin ml-2" />
           ) : null}
