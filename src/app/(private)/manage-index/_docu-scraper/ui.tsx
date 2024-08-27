@@ -111,7 +111,7 @@ export default function DocuScraper() {
     if (scrapingRunId) {
       try {
         await cancelScrapingRun(scrapingRunId);
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+        await new Promise((resolve) => setTimeout(resolve, 20000));
         await fetchResults();
         setIsLoading(false);
       } catch (err) {

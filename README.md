@@ -42,7 +42,7 @@ graph TD
 - - [X] Viewer for scraped page contents
 - - [X] Trigger scraper from frontend to keep running on vercel (&window closing warning)
 - - [X] Improve cancellation & completion logic
-- - [ ] Add selected URLs to index, with cost estimate
+- - [X] Add selected URLs to index, with cost estimate
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs
@@ -53,10 +53,11 @@ graph TD
 - - [ ] Index all
 - - [ ] Index subset (include/exclude logic)
 
-**Querying**
+**Search (RAG)**
 - [ ] Boost certain files/folders
+- [ ] Use reranker
 
-**Querying**
+**Response**
 - [ ] Add chatbubble
 - [ ] Implement basic llama model
 - [ ] Implement llama with citations

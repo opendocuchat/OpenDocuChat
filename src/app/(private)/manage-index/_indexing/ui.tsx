@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getUrlContentTokenCount } from "./actions";
+import { getUrlContentTokenCount, indexScrapingUrls } from "./actions";
 
-interface IndexingUIProps {
+interface IndexingUiProps {
   selectedUrlIds: number[];
   onIndexingComplete: () => void;
 }
@@ -16,12 +16,12 @@ interface IndexingProgress {
   totalTokens: number;
 }
 
-const COST_PER_1K_TOKENS = 0.00002; // Adjust this based on your actual embedding cost
+const COST_PER_1M_TOKENS = 0.016;
 
 export default function IndexingUI({
   selectedUrlIds,
   onIndexingComplete,
-}: IndexingUIProps) {
+}: IndexingUiProps) {
   const [isEstimating, setIsEstimating] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const [progress, setProgress] = useState<IndexingProgress | null>(null);
@@ -44,7 +44,7 @@ export default function IndexingUI({
 
     try {
       const totalTokens = await getUrlContentTokenCount(selectedUrlIds);
-      const estimatedCost = (totalTokens / 1000) * COST_PER_1K_TOKENS;
+      const estimatedCost = (totalTokens / 1000*1000) * COST_PER_1M_TOKENS;
 
       setCostEstimate(estimatedCost);
       setProgress((prev) => ({
@@ -64,13 +64,12 @@ export default function IndexingUI({
     setIsIndexing(true);
     setProgress((prev) => ({ ...prev!, stage: "indexing", processedFiles: 0 }));
 
-    // TODO Replace this with actual indexing logic
-    for (let i = 0; i < selectedUrlIds.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate processing time
-      setProgress((prev) => ({
-        ...prev!,
-        processedFiles: i + 1,
-      }));
+
+    const result = await indexScrapingUrls(selectedUrlIds);
+    if (result.success) {
+      console.log(result.message);
+    } else {
+      console.error("Indexing failed:", result.message);
     }
 
     setIsIndexing(false);
