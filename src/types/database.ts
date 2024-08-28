@@ -20,7 +20,7 @@ export interface Document {
 
 export enum MessageSender {
   USER = "USER",
-  ASSISTANT = "ASSISTANT",
+  ASSISTANT = "BOT",
 }
 
 export interface Message {

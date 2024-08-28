@@ -43,7 +43,8 @@ graph TD
 - - [X] Trigger scraper from frontend to keep running on vercel (&window closing warning)
 - - [X] Improve cancellation & completion logic
 - - [X] Add selected URLs to index, with cost estimate
-- - [ ] Add cleanup function for stuck scrapers
+- - [X] Add cleanup function for stuck scrapers
+- - [ ] Add scraping progress indicator (# scraped vs queued, ETA, ...)
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs
@@ -60,7 +61,11 @@ graph TD
 
 **Response**
 - [X] Add chat widget
-- [ ] Implement basic llama model
+- [X] Update chat endpoints for basic llama & vercel pg 
+- [ ] Use llama function calling (https://docs.together.ai/docs/llama-3-function-calling)
+- [ ] Add warmup
+- [ ] Search query generation from context ("explain more" -> "explain more about x")
+- [ ] Add reranker
 - [ ] Implement llama with citations
 - [ ] Add full screen chat
 

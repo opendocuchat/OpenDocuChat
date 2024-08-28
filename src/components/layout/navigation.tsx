@@ -12,7 +12,7 @@ import {
 
 export function Navigation() {
   return (
-    <div className="p-3 mb-3 border-b">
+    <div className="p-3 border-b">
       <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem>

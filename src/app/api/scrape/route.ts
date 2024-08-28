@@ -123,7 +123,7 @@ async function resetStuckScrapingUrls(
   `;
 
   if (stuckScrapers.rowCount !== null && stuckScrapers.rowCount > 0) {
-    console.log(`Removed ${stuckScrapers.rowCount} stuck scrapers`);
+    console.log(`Reset ${stuckScrapers.rowCount} stuck scraping urls`);
   }
 }
 

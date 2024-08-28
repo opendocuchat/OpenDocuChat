@@ -1,45 +1,45 @@
+import Together from "together-ai";
+import { sql } from "@vercel/postgres";
+
+const together = new Together({
+  apiKey: process.env.TOGETHER_API_KEY,
+});
+
 export async function GET(request: Request) {
-  console.time("Total search time")
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("query");
+  if (!query)
+    return new Response('Missing query parameter: "query"', { status: 400 });
 
-  // TODO: Remove tenant id
-  // const tenantId = 1
+  // TODO (optional): add llm for search query generation based on chat context (e.g. "explain more" -> "explain more about XYZ conversation topic")
+  let response;
 
-  // TODO: Replace Supabase with Vercel Postgres and Cohere with Vercel AI Integrations?
-  /* console.time("Parse request")
-  const { searchParams } = new URL(request.url)
-  const query = searchParams.get("query")
-  console.timeEnd("Parse request")
-  if (!query) return new Response('Missing query parameter: "query"', { status: 400 })
+  try {
+    const embeddingResponse = await together.embeddings.create({
+      model: "BAAI/bge-large-en-v1.5",
+      input: query,
+    });
 
-  console.time("Generate embedding")
-  const embedResponse = await cohere.embed({
-    texts: [query],
-    inputType: "search_query",
-    model: "embed-multilingual-v3.0",
-  })
-  console.timeEnd("Generate embedding")
+    const queryEmbedding = embeddingResponse.data[0].embedding;
 
-  const queryEmbedding = JSON.stringify((embedResponse.embeddings as number[][])[0])
+    const vectorQuery = `[${queryEmbedding.join(",")}]`;
 
-  console.time("Supabase vector search time")
-  const { data, error } = await supabase.rpc("vector_search", {
-    query_embedding: queryEmbedding,
-    match_threshold: 0.2,
-    match_count: 3,
-    search_tenant_id: tenantId,
-  })
-  console.timeEnd("Supabase vector search time")
-
-  if (error) {
-    console.error("Supabase error:", error)
-    return new Response(`Internal Server Error`, { status: 500 })
+    response = await sql`
+      SELECT id, url, content, 1 - (cosine_distance(embedding, ${vectorQuery})) AS similarity
+      FROM document
+      WHERE active = TRUE AND 1 - (cosine_distance(embedding, ${vectorQuery})) > 0.3
+      ORDER BY similarity DESC
+      LIMIT 10
+      `;
+  } catch (error) {
+    console.error("Supabase error:", error);
+    return new Response("Internal Server Error", { status: 500 });
   }
 
-  console.timeEnd("Total search time")
-  return new Response(JSON.stringify({ documents: data }), {
+  // TODO (optional): add reranker for retrieved documents
+
+  return new Response(JSON.stringify({ documents: response.rows }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
-  }) */
-
-  return new Response('TODO');
+  });
 }

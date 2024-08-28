@@ -13,7 +13,7 @@ export default function PrivateLayout({
     <html lang="en">
       <body className={inter.className}>
           <Navigation />
-          <main className="p-7">
+          <main className="p-7 bg-gray-50">
             {children}
           </main>
       </body>
