@@ -32,6 +32,11 @@ export interface Message {
   created_at: Date;
 }
 
+export interface Chat {
+  id: number;
+  created_at: Date;
+}
+
 export interface Citation {
   id: number;
   message_id: number;
