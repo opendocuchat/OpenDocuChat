@@ -21,6 +21,7 @@ export default function ManageIndexPage() {
         </CardHeader>
         <CardContent>
           <DocuScraper />
+          <hr className="my-10" />
           <GitHubRepoIndexing />
         </CardContent>
       </Card>

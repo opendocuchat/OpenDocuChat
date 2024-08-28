@@ -6,6 +6,7 @@ import puppeteerLocal from "puppeteer";
 import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 import { ScrapingStatus, ScrapingUrl } from "@/types/database";
+import { cancelScrapingUrls } from "@/app/(private)/manage-index/_docu-scraper/actions";
 
 interface CrawlSettings {
   stayOnDomain: boolean;
@@ -43,8 +44,11 @@ async function scrapeUrlLoop(
 
   try {
     while (Date.now() - startTime < timeoutDuration) {
-      const isCancelled = await checkIfCancelled(pgClient, scrapingRunId);
+      await resetStuckScrapingUrls(pgClient, scrapingRunId);
+
+      const isCancelled = await checkIfCancelledScrapingRun(pgClient, scrapingRunId);
       if (isCancelled) {
+        await cancelScrapingUrls(scrapingRunId);
         return;
       }
 
@@ -56,7 +60,7 @@ async function scrapeUrlLoop(
         return;
       }
 
-      nextUrl = await getNextUrlToCrawl(pgClient, scrapingRunId);
+      nextUrl = await getNextUrlToScrape(pgClient, scrapingRunId);
       if (!nextUrl) {
         return;
       }
@@ -108,6 +112,21 @@ async function scrapeUrlLoop(
   }
 }
 
+async function resetStuckScrapingUrls(
+  pgClient: VercelPoolClient,
+  scrapingRunId: number
+) {
+  const stuckScrapers = await pgClient.sql`
+    UPDATE scraping_url
+    SET status = ${ScrapingStatus.QUEUED}
+    WHERE scraping_run_id = ${scrapingRunId} AND status = ${ScrapingStatus.PROCESSING} AND updated_at < now() - interval '1 minute'
+  `;
+
+  if (stuckScrapers.rowCount !== null && stuckScrapers.rowCount > 0) {
+    console.log(`Removed ${stuckScrapers.rowCount} stuck scrapers`);
+  }
+}
+
 async function setupBrowser(): Promise<any> {
   if (process.env.VERCEL_ENV === "development") {
     return puppeteerLocal.launch({
@@ -149,7 +168,7 @@ async function setupPage(browser: Browser): Promise<Page> {
   return page;
 }
 
-async function checkIfCancelled(
+async function checkIfCancelledScrapingRun(
   client: VercelPoolClient,
   scrapingRunId: number
 ): Promise<boolean> {
@@ -173,7 +192,7 @@ async function getProcessingUrlsCount(
   return result.rows[0].count;
 }
 
-async function getNextUrlToCrawl(
+async function getNextUrlToScrape(
   client: VercelPoolClient,
   scrapingRunId: number
 ): Promise<ScrapingUrl | null> {

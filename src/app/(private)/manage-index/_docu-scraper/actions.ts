@@ -48,6 +48,16 @@ export async function cancelScrapingRun(scrapingRunId: number) {
       SET status = ${ScrapingStatus.CANCELLED}
       WHERE id = ${scrapingRunId}
     `;
+    await cancelScrapingUrls(scrapingRunId);
+    return { success: true };
+  } catch (error) {
+    console.error("Error stopping scraper:", error);
+    return { success: false, error: "Failed to stop scraping" };
+  }
+}
+
+export async function cancelScrapingUrls(scrapingRunId: number) {
+  try {
     await sql`
       UPDATE scraping_url
       SET status = ${ScrapingStatus.CANCELLED}
@@ -59,6 +69,7 @@ export async function cancelScrapingRun(scrapingRunId: number) {
     return { success: false, error: "Failed to stop scraping" };
   }
 }
+
 
 export async function startScrapingRun(
   startUrl: string,
