@@ -4,4 +4,4 @@ CREATE TABLE chat (
 );
 
 ALTER TABLE message 
-ALTER COLUMN chat_id SET NOT NULL REFERENCES chat(id);
+ADD CONSTRAINT fk_chat_id FOREIGN KEY (chat_id) REFERENCES chat(id);
