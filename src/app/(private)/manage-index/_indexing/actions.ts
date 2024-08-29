@@ -26,11 +26,11 @@ export async function getUrlContentTokenCount(
   let totalTokens = 0;
 
   for (const row of result.rows) {
-    const tokens = encoder.encode(row.content);
-    totalTokens += tokens.length;
-    console.log("totalTokens", totalTokens);
+    if (row.content !== null && row.content !== "") {
+      const tokens = encoder.encode(row.content);
+      totalTokens += tokens.length;
+    }
   }
-
   return totalTokens;
 }
 
