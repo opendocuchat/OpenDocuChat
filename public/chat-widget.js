@@ -9,8 +9,8 @@
   iframe.style.position = "fixed";
   iframe.style.bottom = "20px";
   iframe.style.right = "20px";
-  iframe.style.width = "68px";
-  iframe.style.height = "68px";
+  iframe.style.width = "48px";
+  iframe.style.height = "48px";
   iframe.style.border = "none";
   iframe.style.zIndex = "9999";
   iframe.style.transition = "all 0.17s ease";
@@ -25,7 +25,7 @@
     var maxHeight = Math.min(parseInt(height), window.innerHeight * 0.9);
     iframe.style.width = maxWidth + "px";
     iframe.style.height = maxHeight + "px";
-    iframe.style.borderRadius = width === "68px" ? "50%" : "16px";
+    iframe.style.borderRadius = width === "48px" ? "50%" : "28px";
   }
 
   function detectColorScheme() {
@@ -81,6 +81,7 @@
     "message",
     function (event) {
       if (event.data.type === "RESIZE_CHAT_WIDGET") {
+        iframe.style.transform = "scale(1)";
         updateIframeSize(event.data.width, event.data.height);
       }
     },
@@ -88,8 +89,19 @@
   );
 
   window.addEventListener("resize", function () {
-    if (iframe.style.width !== "68px") {
+    if (iframe.style.width !== "48px") {
       updateIframeSize(iframe.style.width, iframe.style.height);
     }
   });
+
+  iframe.addEventListener("mouseover", () => {
+    if (iframe.style.width !== "48px") return
+    iframe.style.transition = "all 0.17s ease";
+    iframe.style.transform = "scale(1.1)";
+  });
+
+  iframe.addEventListener("mouseout", () => {
+    iframe.style.transform = "scale(1)";
+  });
+
 })();

@@ -2,14 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  BotMessageSquare,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { IconPaperAirplane } from "@/components/ui/icon-paper-airplane";
+import { IconXMark } from "@/components/ui/icon-x-mark";
 
 interface Message {
   role: "user" | "assistant";
@@ -98,8 +93,8 @@ export default function ChatWidgetPage() {
         window.parent.postMessage(
           {
             type: "RESIZE_CHAT_WIDGET",
-            width: isOpen ? "500px" : "68px",
-            height: isOpen ? "750px" : "68px",
+            width: isOpen ? "500px" : "48px",
+            height: isOpen ? "750px" : "48px",
             isOpen: isOpen,
           },
           "*"
@@ -624,7 +619,7 @@ export default function ChatWidgetPage() {
 
   if (!colorSchemeReady) {
     return (
-      <div className="w-[68px] h-[68px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full transition-all duration-300">
+      <div className="w-[48px] h-[48px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full transition-all duration-300">
         <Loader2 className="h-6 w-6 animate-spin text-gray-500 dark:text-gray-400" />
       </div>
     );
@@ -632,140 +627,153 @@ export default function ChatWidgetPage() {
 
   if (!isOpen) {
     return (
-      <Button
+      <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-0 right-0 font-bold w-screen h-screen 
-                 bg-orange-600  
-                 hover:bg-orange-700
-                 transition-colors duration-500 ease-in-out"
+        className="fixed bottom-0 right-0 font-bold w-screen h-screen bg-black transition-colors duration-500 ease-in-out"
       >
-        <div className="flex flex-col items-center justify-center text-white dark:text-black">
-          <BotMessageSquare className="" />
+        <p className="flex flex-col items-center justify-center text-white dark:text-black text-xs font-medium">
           Ask AI
-        </div>
-      </Button>
+        </p>
+      </button>
     );
   }
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-white dark:bg-gray-800 rounded-lg">
-      <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-slate-700">
-        <h2 className="text-lg font-semibold">OpenDocuChat</h2>
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-3 px-2 w-full"
+    <div className="text-sm w-screen h-screen flex flex-col bg-white dark:bg-gray-800 rounded-lg">
+      <div className="relative flex justify-between items-center dark:border-slate-700 select-none border-b">
+        <div className="relative">
+          <h2 className="font-semibold px-4">
+            Technical Documentation AI Chat
+          </h2>
+          {/* TODO: Get title from db e.g. "Quicksave AI Chat"*/}
+          <p className="absolute top-full text-zinc-400 leading-none text-[8px] px-4">
+            by OpenDocuChat
+          </p>
+        </div>
+        <div className="flex p-2">
+          <button
+            className={`mr-2 rounded-full hover:bg-zinc-100 px-4 ${
+              messages.some((message) => message.role === "user")
+                ? "opacity-100 transition-opacity duration-500"
+                : "opacity-0 pointer-events-none"
+            }`}
             onClick={resetChat}
             title="New chat"
           >
             {/* <RefreshCw className="h-4 w-4" /> */}
             New Chat
-          </Button>
-          <Button
-            className="font-bold"
-            variant="ghost"
-            size="sm"
+          </button>
+          <button
+            className="font-bold w-10 h-10 rounded-full hover:bg-zinc-100"
             onClick={() => setIsOpen(false)}
           >
-            X
-          </Button>
+            <IconXMark className="size-5 m-auto" />
+          </button>
         </div>
       </div>
 
-      <div className="flex-grow overflow-y-auto p-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`mb-4 ${
-              msg.role === "user" ? "text-right" : "text-left"
-            }`}
-          >
-            <span
-              className={`inline-block p-2 rounded-lg ${
-                msg.role === "user"
-                  ? "bg-orange-600 text-white"
-                  : "bg-slate-200 dark:bg-gray-700"
+      <div className="text-sm flex-grow overflow-y-auto px-4 mb-10">
+        <div className="pb-10 pt-4">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex mb-4 font-[system-ui,_"Segoe_UI",_Roboto] ${
+                msg.role === "user" ? "ml-8 justify-end" : "mr-8"
               }`}
             >
-              {typeof msg.content === "string" ? (
-                <span dangerouslySetInnerHTML={{ __html: msg.content }} />
-              ) : (
-                msg.content
-              )}
-            </span>
-          </div>
-        ))}
-        {showSkeleton && <LoadingSkeleton />}
-        <div ref={messagesEndRef} />
-
-        {documents.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
-              Sources
-            </h3>
-            <ul className="text-xs space-y-2">
-              {documents
-                .slice(0, showAllSources ? undefined : 3)
-                .map((doc, index) => (
-                  <li
-                    key={doc.id}
-                    className={`document-item p-2 rounded flex justify-between ${
-                      colorMapping[doc.id].base
-                    } ${
-                      colorMapping[doc.id].hover
-                    } cursor-pointer transition-colors duration-200`}
-                    data-document-id={doc.id}
-                  >
-                    <span className="text-slate-700 dark:text-slate-200 font-semibold text-left">
-                      {urlToBreadcrumb(doc.url)}
-                    </span>
-                    {/* <span className="text-slate-700 font-semibold text-right">({doc.similarity})</span> */}
-                    {/* <div className="w-16"><AdvancedHealthBar score={parseInt(doc.similarity)} /></div> */}
-                  </li>
-                ))}
-            </ul>
-            {documents.length > 3 && (
-              <button
-                className="mt-2 px-3 py-1 text-xs font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 flex items-center justify-center w-full"
-                onClick={toggleShowAllSources}
+              <span
+                className={`inline-block p-2 rounded-lg ${
+                  msg.role === "user"
+                    ? "bg-orange-600 text-white"
+                    : "bg-slate-200 dark:bg-gray-700"
+                }`}
               >
-                {showAllSources ? (
-                  <>
-                    <ChevronUp className="mr-1 h-3 w-3" />
-                    Fewer Sources
-                  </>
+                {typeof msg.content === "string" ? (
+                  <span dangerouslySetInnerHTML={{ __html: msg.content }} />
                 ) : (
-                  <>
-                    <ChevronDown className="mr-1 h-3 w-3" />
-                    More Sources
-                  </>
+                  msg.content
                 )}
-              </button>
-            )}
-          </div>
-        )}
+              </span>
+            </div>
+          ))}
+          {showSkeleton && <LoadingSkeleton />}
+          <div ref={messagesEndRef} />
+
+          {documents.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+                Sources
+              </h3>
+              <ul className="space-y-2">
+                {documents
+                  .slice(0, showAllSources ? undefined : 3)
+                  .map((doc, index) => (
+                    <li
+                      key={doc.id}
+                      className={`document-item flex cursor-pointer transition-colors border rounded-md border-zinc-200 px-2 py-2 duration-200`}
+                      data-document-id={doc.id}
+                    >
+                      <div
+                        className={`text-[11px] inline-flex rounded-full w-3 h-3 font-bold items-center justify-center mr-2 mt-1 ${
+                          colorMapping[doc.id].base
+                        } ${colorMapping[doc.id].hover}`}
+                      ></div>
+                      <span className="text-slate-700 dark:text-slate-200 font-medium w-fit">
+                        {index + 1}. {urlToBreadcrumb(doc.url)}
+                      </span>
+                      {/* <span className="text-slate-700 font-semibold text-right">({doc.similarity})</span> */}
+                      {/* <div className="w-16"><AdvancedHealthBar score={parseInt(doc.similarity)} /></div> */}
+                    </li>
+                  ))}
+              </ul>
+              {documents.length > 3 && (
+                <button
+                  className="mt-2 px-3 py-1 text-xs font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 flex items-center justify-center w-full"
+                  onClick={toggleShowAllSources}
+                >
+                  {showAllSources ? (
+                    <>
+                      <ChevronUp className="mr-1 h-3 w-3" />
+                      Fewer Sources
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="mr-1 h-3 w-3" />
+                      More Sources
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="bg-gray-100 dark:bg-gray-900 flex-shrink-0 p-4 border-t dark:border-slate-700 flex ">
-        <Input
-          placeholder="Type your message..."
-          className="flex-grow mr-4"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-          style={{ fontSize: "16px" }}
-        />
-        <Button onClick={handleSendMessage} disabled={isLoading}>
-          {isLoading ? (
-            <div style={{ display: "inline-flex", alignItems: "center" }}>
-              {showSkeleton ? "Analysing" : "Responding"}
-              <Loader2 className="h-4 w-4 animate-spin ml-2" />
-            </div>
-          ) : (
-            "Send"
-          )}
-        </Button>
+      <div className="absolute bottom-0 w-full text-sm dark:bg-gray-900 flex-shrink-0 p-4 pt-0 dark:border-slate-700 flex">
+        <div className="flex items-center border rounded-full overflow-hidden flex-1 hover:border-zinc-300 focus-within:border-zinc-300 bg-white">
+          <input
+            placeholder="Type your message..."
+            className="flex-grow h-12 pl-4 outline-none"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={inputMessage.length === 0 || isLoading}
+            className={`text-white h-10 w-10 rounded-full mr-1 transition-all ${
+              inputMessage.length === 0 || isLoading
+                ? "bg-zinc-500"
+                : "bg-black duration-500 active:scale-90"
+            }`}
+          >
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin m-auto" />
+            ) : (
+              <IconPaperAirplane className="size-5 m-auto" />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
