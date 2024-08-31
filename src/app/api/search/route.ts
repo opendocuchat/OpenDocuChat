@@ -5,8 +5,6 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
-export const maxDuration = 60;
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");

@@ -6,6 +6,8 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
+export const maxDuration = 60;
+
 const MAX_TOKENS = 350;
 const OVERLAP_TOKENS = 50;
 

@@ -282,8 +282,8 @@ async function scrapeUrl(
 
   console.log(`Navigating to ${url}`);
 
-  await page.goto(url, { waitUntil: ["domcontentloaded"], timeout: 7000 });
-  await page.waitForSelector("body", { timeout: 7000 });
+  await page.goto(url, { waitUntil: ["domcontentloaded"] });
+  await page.waitForSelector("body");
   await autoScroll(page);
 
   const { links, content } = await page.evaluate(() => {
