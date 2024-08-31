@@ -36,6 +36,11 @@ export async function POST(request: Request) {
 
       const { url, content, scraping_run_id } = result.rows[0];
 
+      if (!content) {
+        console.log(`Empty content for URL: ${url}. Skipping indexing.`);
+        continue;
+      }
+
       const dataSourceResult = await client.query(
         `
             SELECT data_source_id 
@@ -52,6 +57,13 @@ export async function POST(request: Request) {
         MAX_TOKENS,
         OVERLAP_TOKENS
       );
+
+      if (contentChunks.length === 0) {
+        console.log(
+          `No valid content chunks for URL: ${url}. Skipping indexing.`
+        );
+        continue;
+      }
 
       const embeddings = await Promise.all(
         contentChunks.map(async (chunk) => {
@@ -81,7 +93,7 @@ export async function POST(request: Request) {
       );
 
       if ((updateResult.rowCount ?? 0) > 0) {
-        console.log(`Unindexed previous entry for URL: ${url}`);
+        console.log(`Updated existing index for URL: ${url}`);
       }
 
       await client.query(
@@ -131,10 +143,14 @@ export async function POST(request: Request) {
 }
 
 function splitTextIntoChunks(
-  text: string,
+  text: string | null,
   maxTokens: number,
   overlapTokens: number
 ): string[] {
+  if (!text) {
+    return [];
+  }
+
   const encoder = encodingForModel("gpt-3.5-turbo");
   const tokens = encoder.encode(text);
   const chunks: string[] = [];
