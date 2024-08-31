@@ -16,6 +16,14 @@ import {
 import UrlTree, { UrlTreeNode } from "./url-tree";
 import { Slider } from "@/components/ui/slider";
 import IndexingUi from "../_indexing/ui";
+import { Progress } from "@/components/ui/progress";
+import { Loader2 } from "lucide-react";
+
+type ScrapingProgress = {
+  discoveredUrls: number;
+  scrapedUrls: number;
+  estimatedTimeRemaining: number | null;
+};
 
 export default function DocuScraper() {
   const [url, setUrl] = useState("");
@@ -36,6 +44,13 @@ export default function DocuScraper() {
     { url: string; id: number }[]
   >([]);
   const [showIndexingUI, setShowIndexingUI] = useState(false);
+  const [scrapingProgress, setScrapingProgress] = useState<ScrapingProgress>({
+    discoveredUrls: 0,
+    scrapedUrls: 0,
+    estimatedTimeRemaining: null,
+  });
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const handleSelectionChange = (
     selectedPaths: { url: string; id: number }[]
@@ -68,6 +83,7 @@ export default function DocuScraper() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setStartTime(Date.now());
     try {
       const result = await startScrapingRun(url, crawlSettings);
       if ("success" in result && result.success && "scrapingRunId" in result) {
@@ -92,10 +108,25 @@ export default function DocuScraper() {
     if (!scrapingRunId) return;
 
     try {
-      const { treeData, isComplete } = await fetchScrapingResultsAndStatus(
-        scrapingRunId
-      );
+      const { treeData, isComplete, discoveredUrls, scrapedUrls } =
+        await fetchScrapingResultsAndStatus(scrapingRunId);
       setTreeData(treeData);
+
+      const currentTime = Date.now();
+      const elapsedTime = startTime ? (currentTime - startTime) / 1000 : 0; // in seconds
+
+      let estimatedTimeRemaining = null;
+      if (scrapedUrls > 0) {
+        const averageTimePerUrl = elapsedTime / scrapedUrls;
+        const remainingUrls = discoveredUrls - scrapedUrls;
+        estimatedTimeRemaining = averageTimePerUrl * remainingUrls;
+      }
+
+      setScrapingProgress({
+        discoveredUrls,
+        scrapedUrls,
+        estimatedTimeRemaining,
+      });
 
       if (isComplete) {
         setIsLoading(false);
@@ -109,6 +140,7 @@ export default function DocuScraper() {
 
   const handleCancelScrapingRun = async () => {
     if (scrapingRunId) {
+      setIsCancelling(true);
       try {
         await cancelScrapingRun(scrapingRunId);
         await new Promise((resolve) => setTimeout(resolve, 20000));
@@ -117,6 +149,8 @@ export default function DocuScraper() {
       } catch (err) {
         console.error("Error cancelling scraping run:", err);
         setError("Failed to cancel scraping run");
+      } finally {
+        setIsCancelling(false);
       }
     }
   };
@@ -278,8 +312,9 @@ export default function DocuScraper() {
                 <CardTitle>Select URLs for indexing</CardTitle>
                 {isLoading ? (
                   <p className="text-lg text-orange-500">
-                    Discovering URLs... Please wait. Do NOT close or reload this
-                    window, or the scraper will stop.
+                    {isCancelling
+                      ? "Cancelling scraping run, please wait..."
+                      : "Discovering URLs... Please wait. Do NOT close or reload this window, or the scraper will stop."}
                   </p>
                 ) : (
                   <p className="text-lg text-emerald-500">
@@ -288,6 +323,40 @@ export default function DocuScraper() {
                 )}
               </CardHeader>
               <CardContent>
+                {isLoading && treeData && (
+                  <Card className="mb-4">
+                    <CardHeader>
+                      <CardTitle className="flex">
+                        Scraping Progress
+                        <Loader2 className="pl-2 mr-2 h-4 w-4 animate-spin" />
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div>
+                          Discovered URLs: {scrapingProgress.discoveredUrls}
+                        </div>
+                        <div>Scraped URLs: {scrapingProgress.scrapedUrls}</div>
+                        <Progress
+                          value={
+                            (scrapingProgress.scrapedUrls /
+                              scrapingProgress.discoveredUrls) *
+                            100
+                          }
+                        />
+                        {scrapingProgress.estimatedTimeRemaining !== null && (
+                          <div>
+                            Estimated time remaining:{" "}
+                            {Math.round(
+                              scrapingProgress.estimatedTimeRemaining / 60
+                            )}{" "}
+                            minutes
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 <Button
                   onClick={() => setShowIndexingUI(true)}
                   disabled={selectedUrls.length === 0 || isLoading}
@@ -299,8 +368,16 @@ export default function DocuScraper() {
                   <Button
                     onClick={handleCancelScrapingRun}
                     className="mb-4 ml-4"
+                    disabled={isCancelling}
                   >
-                    Cancel Scraping Run
+                    {isCancelling ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelling...
+                      </>
+                    ) : (
+                      "Cancel Scraping Run"
+                    )}
                   </Button>
                 )}
                 <UrlTree

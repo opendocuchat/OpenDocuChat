@@ -70,7 +70,6 @@ export async function cancelScrapingUrls(scrapingRunId: number) {
   }
 }
 
-
 export async function startScrapingRun(
   startUrl: string,
   settings: CrawlerSettings
@@ -162,7 +161,12 @@ export async function fetchUrlContent(
 
 export async function fetchScrapingResultsAndStatus(
   scrapingRunId: number
-): Promise<{ treeData: UrlTreeNode; isComplete: boolean }> {
+): Promise<{
+  treeData: UrlTreeNode;
+  isComplete: boolean;
+  discoveredUrls: number;
+  scrapedUrls: number;
+}> {
   const result = await sql<ScrapingUrl>`
     SELECT id, url, status
     FROM scraping_url
@@ -182,6 +186,8 @@ export async function fetchScrapingResultsAndStatus(
         expanded: true,
       },
       isComplete: true,
+      discoveredUrls: 0,
+      scrapedUrls: 0,
     };
   }
 
@@ -194,13 +200,26 @@ export async function fetchScrapingResultsAndStatus(
     children: [],
     selected: false,
     expanded: true,
+    status: undefined,
+    scrapeUrlId: undefined,
   };
 
   urls.forEach(({ id, url, status }) => {
     const parsedUrl = new URL(url);
-    const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+    const pathParts =
+      parsedUrl.pathname === "/"
+        ? []
+        : parsedUrl.pathname.split("/").filter(Boolean);
 
     let currentNode = root;
+
+    // Handle the base URL
+    if (pathParts.length === 0) {
+      root.status = status as ScrapingStatus;
+      root.scrapeUrlId = id;
+      return;
+    }
+
     pathParts.forEach((part, index) => {
       const isLastPart = index === pathParts.length - 1;
       const path = "/" + pathParts.slice(0, index + 1).join("/");
@@ -237,5 +256,10 @@ export async function fetchScrapingResultsAndStatus(
   ).length;
   const isComplete = incompleteCount === 0;
 
-  return { treeData: root, isComplete };
+  const discoveredUrls = urls.length;
+  const scrapedUrls = urls.filter(
+    (url) => url.status === ScrapingStatus.COMPLETED
+  ).length;
+
+  return { treeData: root, isComplete, discoveredUrls, scrapedUrls };
 }
