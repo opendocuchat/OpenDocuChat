@@ -578,7 +578,6 @@ export default function ChatWidgetPage() {
             onClick={resetChat}
             title="New chat"
           >
-            {/* <RefreshCw className="h-4 w-4" /> */}
             New Chat
           </button>
           <button

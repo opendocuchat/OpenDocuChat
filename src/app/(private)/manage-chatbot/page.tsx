@@ -3,9 +3,16 @@
 import { Button } from "@/components/ui/button";
 
 const Page = () => {
-  const url = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/chat-widget.js`
-    : `http://localhost:3000/chat-widget.js`;
+  const url =
+    window.location.hostname === "localhost"
+      ? "http://localhost:3000/chat-widget.js"
+      : `https://${
+          process.env.VERCEL_ENV === "production"
+            ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+            : process.env.VERCEL_ENV === "preview"
+            ? process.env.VERCEL_BRANCH_URL
+            : process.env.VERCEL_URL
+        }/chat-widget.js`;
 
   const embedScript = `<script src=${url} async/>`.trim();
 
@@ -21,7 +28,9 @@ const Page = () => {
 
   return (
     <div>
-      <h1 className="font-bold">Welcome to the Chat Widget Test Page</h1>
+      <h1 className="font-bold text-base">
+        Welcome to the Chat Widget Test Page
+      </h1>
       <p>
         This page demonstrates the embedded chat widget. You should see a chat
         button in the bottom right corner.
@@ -52,7 +61,7 @@ const Page = () => {
         </ol>
       </div>
 
-      <script src={url} async/>
+      <script src={url} async />
     </div>
   );
 };
