@@ -8,17 +8,14 @@ const Page = () => {
   const [embedScript, setEmbedScript] = useState("");
 
   useEffect(() => {
-    const hostname = window.location.hostname;
     const generatedUrl =
-      hostname === "localhost"
+      window.location.hostname === "localhost"
         ? "http://localhost:3000/chat-widget.js"
-        : `https://${
-            process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
-              ? process.env.NEXT_PUBLIC_VERCEL_URL
-              : process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"
-              ? process.env.NEXT_PUBLIC_VERCEL_URL
-              : process.env.NEXT_PUBLIC_VERCEL_URL
-          }/chat-widget.js`;
+        : `https://${process.env.VERCEL_ENV === "production"
+          ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+          : process.env.VERCEL_ENV === "preview"
+          ? process.env.VERCEL_BRANCH_URL
+          : process.env.VERCEL_URL}/chat-widget.js`;
 
     setUrl(generatedUrl);
     setEmbedScript(`<script src="${generatedUrl}" async/>`);

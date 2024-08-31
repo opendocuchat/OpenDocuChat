@@ -500,41 +500,6 @@ export default function ChatWidgetPage() {
     </div>
   );
 
-  const AdvancedHealthBar = ({
-    score,
-    method = "logistic",
-  }: {
-    score: number;
-    method?: string;
-  }) => {
-    const clampedScore = Math.max(0, Math.min(score, 100));
-
-    const scaleMethods = {
-      linear: (s: number) => s,
-      exponential: (s: number) => Math.pow(s / 100, 2) * 100,
-      logistic: (s: number) => 100 / (1 + Math.exp(-0.1 * (s - 50))),
-      power: (s: number) => Math.pow(s / 100, 3) * 100,
-      percentile: (s: number) => {
-        return ((s - 40) / (80 - 40)) * 100;
-      },
-      minMaxNorm: (s: number) => {
-        return ((s - 40) / (80 - 40)) * 100;
-      },
-    };
-
-    const scaledScore =
-      scaleMethods[method as keyof typeof scaleMethods](clampedScore);
-
-    return (
-      <div className="w-full h-4 bg-gray-300 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-orange-300 to-orange-600 transition-all"
-          style={{ width: `${scaledScore}%` }}
-        />
-      </div>
-    );
-  };
-
   if (!colorSchemeReady) {
     return (
       <div className="w-[48px] h-[48px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full transition-all duration-300">
