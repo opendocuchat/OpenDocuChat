@@ -1,11 +1,10 @@
 // app/(private)/manage-index/_indexing/ui.tsx
 
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getUrlContentTokenCount, indexScrapingUrls } from "./actions";
+import { getUrlContentTokenCount } from "./actions";
 
 interface IndexingUiProps {
   selectedUrlIds: number[];
@@ -75,7 +74,12 @@ export default function IndexingUI({
       });
     } catch (error) {
       console.error("Error estimating cost:", error);
-      setProgress({ stage: null, totalFiles: 0, processedFiles: 0, totalTokens: 0 });
+      setProgress({
+        stage: null,
+        totalFiles: 0,
+        processedFiles: 0,
+        totalTokens: 0,
+      });
     } finally {
       setIsEstimating(false);
     }
@@ -91,16 +95,22 @@ export default function IndexingUI({
     });
 
     try {
-      const result = await indexScrapingUrls(selectedUrlIds);
-      if (result.success) {
-        console.log(result.message);
+      const result = await fetch("/api/indexing", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(selectedUrlIds),
+      });
+      if (result.ok) {
+        console.log("Indexing successful");
         setProgress((prev) => ({
           ...prev,
           stage: "completed",
           processedFiles: selectedUrlIds.length,
         }));
       } else {
-        console.error("Indexing failed:", result.message);
+        console.error("Indexing failed:", result.statusText);
         setProgress((prev) => ({ ...prev, stage: null }));
       }
     } catch (error) {
@@ -135,11 +145,17 @@ export default function IndexingUI({
           {isIndexing ? "Indexing..." : "Start Indexing"}
         </Button>
 
-        {(progress.stage === "estimating" || progress.stage === "indexing" || progress.stage === "completed") && (
+        {(progress.stage === "estimating" ||
+          progress.stage === "indexing" ||
+          progress.stage === "completed") && (
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>
-                {progress.stage === "estimating" ? "Estimation" : progress.stage === "indexing" ? "Indexing" : "Completed"}{" "}
+                {progress.stage === "estimating"
+                  ? "Estimation"
+                  : progress.stage === "indexing"
+                  ? "Indexing"
+                  : "Completed"}{" "}
                 Status
               </CardTitle>
             </CardHeader>
@@ -170,8 +186,6 @@ export default function IndexingUI({
     </Card>
   );
 }
-
-
 
 // import React, { useState, useEffect } from "react";
 // import { Button } from "@/components/ui/button";
@@ -240,7 +254,6 @@ export default function IndexingUI({
 //   const handleIndexSelectedUrls = async () => {
 //     setIsIndexing(true);
 //     setProgress((prev) => ({ ...prev!, stage: "indexing", processedFiles: 0 }));
-
 
 //     const result = await indexScrapingUrls(selectedUrlIds);
 //     if (result.success) {
