@@ -10,7 +10,7 @@ const Page = () => {
   useEffect(() => {
     const generatedUrl =
       window.location.hostname === "localhost"
-        ? "http://localhost:3000/chat-widget.js"
+        ? "http://localhost:3000/chat-widget-local.js"
         : `https://${process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
           ? process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
           : process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"

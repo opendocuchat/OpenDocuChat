@@ -1,13 +1,6 @@
 (function () {
   var iframe = document.createElement("iframe");
-  iframe.src =
-    window.location.hostname === "localhost"
-      ? "http://localhost:3000/widget"
-      : `https://${process.env.VERCEL_ENV === "production"
-          ? process.env.VERCEL_PROJECT_PRODUCTION_URL
-          : process.env.VERCEL_ENV === "preview"
-          ? process.env.VERCEL_BRANCH_URL
-          : process.env.VERCEL_URL}/widget`;
+  iframe.src = "http://localhost:3000/widget";
   iframe.style.position = "fixed";
   iframe.style.bottom = "20px";
   iframe.style.right = "20px";
