@@ -367,15 +367,6 @@ export default function ChatWidgetPage() {
         }),
       });
 
-      // const response = await fetch(
-      //   `/api/chat?message=${encodeURIComponent(inputMessage)}&chatId=${
-      //     chatIdData.chatId
-      //   }`,
-      //   {
-      //     method: "POST",
-      //   }
-      // );
-
       if (!response.ok) throw new Error("Failed to get response");
 
       const reader = response.body?.getReader();
@@ -469,79 +460,6 @@ export default function ChatWidgetPage() {
 
         buffer = buffer.slice(startIndex);
       }
-
-      // const response = await fetch(
-      //   `/api/chat?message=${encodeURIComponent(inputMessage)}&chatId=${chatIdData.chatId}`,
-      //   {
-      //     method: "POST",
-      //   }
-      // )
-
-      // if (!response.ok) throw new Error("Failed to get response")
-
-      // const reader = response.body?.getReader()
-      // if (!reader) throw new Error("No response body")
-
-      // let assistantMessage = ""
-      // const textDecoder = new TextDecoder()
-      // let buffer = ""
-      // let currentCitations: Citation[] = []
-      // let currentDocuments: Document[] = []
-      // let currentColorMapping: ColorMap = {}
-      // let isFirstChunk = true
-
-      // while (true) {
-      //   const { value, done } = await reader.read()
-      //   if (done) break
-
-      //   buffer += textDecoder.decode(value, { stream: true })
-
-      //   let startIndex = 0
-      //   let endIndex
-
-      //   while ((endIndex = buffer.indexOf("\n", startIndex)) >= 0) {
-      //     const line = buffer.slice(startIndex, endIndex)
-      //     startIndex = endIndex + 1
-
-      //     if (line.trim().length > 0) {
-      //       try {
-      //         const event = JSON.parse(line)
-      //         if (event.eventType === "documents") {
-      //           currentDocuments = event.documents
-      //           setDocuments(currentDocuments)
-      //           const newColorMapping = createColorMapping(currentDocuments)
-      //           setColorMapping(newColorMapping)
-      //           currentColorMapping = newColorMapping
-      //         } else if (event.eventType === "text-generation") {
-      //           if (isFirstChunk) {
-      //             setShowSkeleton(false)
-      //             setMessages((prev) => [...prev, { role: "assistant", content: "" }])
-      //             isFirstChunk = false
-      //           }
-      //           assistantMessage += event.text
-      //           const formattedContent = formatLLMResponse(assistantMessage, currentCitations, currentColorMapping)
-      //           setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: formattedContent }])
-      //         } else if (event.eventType === "citation-generation") {
-      //           const newCitations = event.citations.map((citation: Citation) => {
-      //             const document = currentDocuments.find((doc) => doc.id === citation.documentIds[0])
-      //             return {
-      //               ...citation,
-      //               documentUrl: document ? document.url : "",
-      //             }
-      //           })
-      //           currentCitations = [...currentCitations, ...newCitations]
-      //           setCitations(currentCitations)
-      //           const formattedContent = formatLLMResponse(assistantMessage, currentCitations, currentColorMapping)
-      //           setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: formattedContent }])
-      //         }
-      //       } catch (error) {
-      //         console.error("Error parsing JSON:", error, "Line:", line)
-      //       }
-      //     }
-      //   }
-
-      //   buffer = buffer.slice(startIndex)
-      // }
     } catch (error) {
       console.error("Error:", error);
       setMessages((prev) => [

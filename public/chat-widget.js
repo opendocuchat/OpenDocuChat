@@ -3,9 +3,7 @@
   iframe.src =
     window.location.hostname === "localhost"
       ? "http://localhost:3000/widget"
-      : "TBD/widget";
-
-      // TODO: add production url
+      : `https://${process.env.VERCEL_URL}/widget`;
   iframe.style.position = "fixed";
   iframe.style.bottom = "20px";
   iframe.style.right = "20px";
@@ -95,7 +93,7 @@
   });
 
   iframe.addEventListener("mouseover", () => {
-    if (iframe.style.width !== "48px") return
+    if (iframe.style.width !== "48px") return;
     iframe.style.transition = "all 0.17s ease";
     iframe.style.transform = "scale(1.1)";
   });
@@ -103,5 +101,4 @@
   iframe.addEventListener("mouseout", () => {
     iframe.style.transform = "scale(1)";
   });
-
 })();
