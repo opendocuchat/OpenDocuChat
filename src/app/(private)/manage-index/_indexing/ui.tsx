@@ -94,25 +94,41 @@ export default function IndexingUI({
       totalTokens: tokenEstimate || 0,
     });
 
+    const batchSize = 10;
+    const batches = Array(Math.ceil(selectedUrlIds.length / batchSize))
+      .fill(0)
+      .map((_, index) =>
+        selectedUrlIds.slice(index * batchSize, (index + 1) * batchSize)
+      );
+
     try {
-      const result = await fetch("/api/indexing", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(selectedUrlIds),
-      });
-      if (result.ok) {
-        console.log("Indexing successful");
-        setProgress((prev) => ({
-          ...prev,
-          stage: "completed",
-          processedFiles: selectedUrlIds.length,
-        }));
-      } else {
-        console.error("Indexing failed:", result.statusText);
-        setProgress((prev) => ({ ...prev, stage: null }));
-      }
+      await Promise.all(
+        batches.map(async (batch) => {
+          const result = await fetch("/api/indexing", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(batch),
+          });
+
+          if (result.ok) {
+            setProgress((prev) => ({
+              ...prev,
+              processedFiles: prev.processedFiles + batch.length,
+            }));
+          } else {
+            console.error(
+              "Indexing failed for batch:",
+              batch,
+              result.statusText
+            );
+          }
+        })
+      );
+
+      console.log("Indexing successful");
+      setProgress((prev) => ({ ...prev, stage: "completed" }));
     } catch (error) {
       console.error("Error during indexing:", error);
       setProgress((prev) => ({ ...prev, stage: null }));

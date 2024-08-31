@@ -67,11 +67,27 @@ export async function POST(request: Request) {
 
       const embeddings = await Promise.all(
         contentChunks.map(async (chunk) => {
-          const embeddingResponse = await together.embeddings.create({
-            model: "BAAI/bge-large-en-v1.5",
-            input: [chunk],
-          });
-          return embeddingResponse.data[0].embedding;
+          const maxAttempts = 5;
+          const retryDelay = 500;
+          let attempts = 0;
+
+          while (attempts < maxAttempts) {
+            try {
+              const embeddingResponse = await together.embeddings.create({
+                model: "BAAI/bge-large-en-v1.5",
+                input: [chunk],
+              });
+              return embeddingResponse.data[0].embedding;
+            } catch (error) {
+              attempts++;
+              const delay = retryDelay * Math.pow(2, attempts);
+              console.log(`Error occurred. Retrying in ${delay}ms...`);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+          }
+          throw new Error(
+            `Failed to get embedding after ${maxAttempts} attempts`
+          );
         })
       );
 
