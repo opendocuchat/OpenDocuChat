@@ -1,20 +1,28 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const Page = () => {
-  const url =
-    window.location.hostname === "localhost"
-      ? "http://localhost:3000/chat-widget.js"
-      : `https://${
-          process.env.VERCEL_ENV === "production"
-            ? process.env.VERCEL_PROJECT_PRODUCTION_URL
-            : process.env.VERCEL_ENV === "preview"
-            ? process.env.VERCEL_BRANCH_URL
-            : process.env.VERCEL_URL
-        }/chat-widget.js`;
+  const [url, setUrl] = useState("");
+  const [embedScript, setEmbedScript] = useState("");
 
-  const embedScript = `<script src=${url} async/>`.trim();
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const generatedUrl =
+      hostname === "localhost"
+        ? "http://localhost:3000/chat-widget.js"
+        : `https://${
+            process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
+              ? process.env.NEXT_PUBLIC_VERCEL_URL
+              : process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"
+              ? process.env.NEXT_PUBLIC_VERCEL_URL
+              : process.env.NEXT_PUBLIC_VERCEL_URL
+          }/chat-widget.js`;
+
+    setUrl(generatedUrl);
+    setEmbedScript(`<script src="${generatedUrl}" async/>`);
+  }, []);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(embedScript).then(() => {
@@ -22,9 +30,9 @@ const Page = () => {
     });
   };
 
-  //TODO: add toggle to see production vs development url
+  //   //TODO: add toggle to see production vs development url
 
-  //TODO: add toggle to see widget in darkmode
+  //   //TODO: add toggle to see widget in darkmode
 
   return (
     <div>
@@ -39,7 +47,8 @@ const Page = () => {
       <p className="mb-4">
         To embed the chat widget in your application, copy and paste the
         following script into your HTML. The Script URL is generated based on
-        your deployment URL.
+        your deployment URL. To see the deployment URL, visit this page in your
+        deployed production page, not localhost.
       </p>
       <div className="bg-gray-100 p-4 rounded-md">
         <pre className="whitespace-pre-wrap overflow-x-auto">
@@ -61,7 +70,7 @@ const Page = () => {
         </ol>
       </div>
 
-      <script src={url} async />
+      {url && <script src={url} async />}
     </div>
   );
 };
