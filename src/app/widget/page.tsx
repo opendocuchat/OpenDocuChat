@@ -41,11 +41,7 @@ export default function ChatWidgetPage() {
   const [colorMapping, setColorMapping] = useState<ColorMap>({});
   const [chatId, setChatId] = useState("");
   const [colorSchemeReady, setColorSchemeReady] = useState(false);
-  const [showAllSources, setShowAllSources] = useState(false);
-
-  const toggleShowAllSources = () => {
-    setShowAllSources(!showAllSources);
-  };
+  const [citedDocuments, setCitedDocuments] = useState<Document[]>([]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -117,7 +113,6 @@ export default function ChatWidgetPage() {
     setCitations([]);
     setColorMapping({});
     setChatId("");
-    setShowAllSources(false);
   };
 
   const createColorMapping = (docs: Document[]): ColorMap => {
@@ -159,63 +154,63 @@ export default function ChatWidgetPage() {
     return newColorMapping;
   };
 
-  const highlightText = (
-    text: string,
-    messageCitations: Citation[],
-    colorMap: ColorMap
-  ) => {
-    if (!messageCitations?.length) return text;
+  // const highlightText = (
+  //   text: string,
+  //   messageCitations: Citation[],
+  //   colorMap: ColorMap
+  // ) => {
+  //   if (!messageCitations?.length) return text;
 
-    const sortedCitations = messageCitations.sort((a, b) => b.start - a.start);
-    let segments: {
-      text: string;
-      isHighlight: boolean;
-      color?: { base: string; hover: string };
-      documentId?: string;
-      documentUrl?: string;
-      citationIndex?: number;
-    }[] = [{ text, isHighlight: false }];
+  //   const sortedCitations = messageCitations.sort((a, b) => b.start - a.start);
+  //   let segments: {
+  //     text: string;
+  //     isHighlight: boolean;
+  //     color?: { base: string; hover: string };
+  //     documentId?: string;
+  //     documentUrl?: string;
+  //     citationIndex?: number;
+  //   }[] = [{ text, isHighlight: false }];
 
-    sortedCitations.forEach((citation, index) => {
-      const documentId = citation.documentIds[0];
-      const color = colorMap[documentId] || {
-        base: "bg-gray-200",
-        hover: "hover:bg-gray-300 hover:saturate-150 hover:contrast-125",
-      };
-      const segmentIndex = segments.findIndex(
-        (segment) =>
-          !segment.isHighlight && segment.text.includes(citation.text)
-      );
+  //   sortedCitations.forEach((citation, index) => {
+  //     const documentId = citation.documentIds[0];
+  //     const color = colorMap[documentId] || {
+  //       base: "bg-gray-200",
+  //       hover: "hover:bg-gray-300 hover:saturate-150 hover:contrast-125",
+  //     };
+  //     const segmentIndex = segments.findIndex(
+  //       (segment) =>
+  //         !segment.isHighlight && segment.text.includes(citation.text)
+  //     );
 
-      if (segmentIndex !== -1) {
-        const segment = segments[segmentIndex];
-        const startInSegment = segment.text.indexOf(citation.text);
-        const endInSegment = startInSegment + citation.text.length;
-        segments.splice(
-          segmentIndex,
-          1,
-          { text: segment.text.slice(0, startInSegment), isHighlight: false },
-          {
-            text: citation.text,
-            isHighlight: true,
-            color,
-            documentId,
-            documentUrl: citation.documentUrl,
-            citationIndex: index,
-          },
-          { text: segment.text.slice(endInSegment), isHighlight: false }
-        );
-      }
-    });
+  //     if (segmentIndex !== -1) {
+  //       const segment = segments[segmentIndex];
+  //       const startInSegment = segment.text.indexOf(citation.text);
+  //       const endInSegment = startInSegment + citation.text.length;
+  //       segments.splice(
+  //         segmentIndex,
+  //         1,
+  //         { text: segment.text.slice(0, startInSegment), isHighlight: false },
+  //         {
+  //           text: citation.text,
+  //           isHighlight: true,
+  //           color,
+  //           documentId,
+  //           documentUrl: citation.documentUrl,
+  //           citationIndex: index,
+  //         },
+  //         { text: segment.text.slice(endInSegment), isHighlight: false }
+  //       );
+  //     }
+  //   });
 
-    return segments
-      .map((segment) =>
-        segment.isHighlight
-          ? `<a href="${segment.documentUrl}" target="_parent" class="highlight ${segment.color?.base} ${segment.color?.hover} cursor-pointer" data-document-id="${segment.documentId}" data-citation-index="${segment.citationIndex}">${segment.text}</a>`
-          : segment.text
-      )
-      .join("");
-  };
+  //   return segments
+  //     .map((segment) =>
+  //       segment.isHighlight
+  //         ? `<a href="${segment.documentUrl}" target="_parent" class="highlight ${segment.color?.base} ${segment.color?.hover} cursor-pointer" data-document-id="${segment.documentId}" data-citation-index="${segment.citationIndex}">${segment.text}</a>`
+  //         : segment.text
+  //     )
+  //     .join("");
+  // };
 
   useEffect(() => {
     const handleMouseEnter = (event: MouseEvent) => {
@@ -308,12 +303,34 @@ export default function ChatWidgetPage() {
   const formatLLMResponse = (
     text: string,
     messageCitations: Citation[],
-    colorMap: ColorMap
+    colorMap: ColorMap,
+    currentDocuments: Document[]
   ) => {
-    text = highlightText(text, messageCitations, colorMap);
-    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    let citedDocs: Document[] = [];
+
+    let formattedText = text.replace(/\[source: (\d+)\]/g, (_, id) => {
+      const index = currentDocuments.findIndex((doc) => doc.id === id);
+      if (index !== -1) {
+        const color = colorMap[id] || {
+          base: "bg-gray-200",
+          hover: "hover:bg-gray-300",
+        };
+        if (!citedDocs.some((doc) => doc.id === id)) {
+          citedDocs.push(currentDocuments[index]);
+        }
+        return `<span class="citation-mark cursor-pointer ${color.base} ${color.hover} px-1 rounded" data-document-id="${id}">[${citedDocs.length}]</span>`;
+      }
+      return "";
+    });
+
+    setCitedDocuments(citedDocs);
+
+    formattedText = formattedText.replace(
+      /\*\*(.*?)\*\*/g,
+      "<strong>$1</strong>"
+    );
     let inList = false;
-    text = text
+    formattedText = formattedText
       .split("\n")
       .map((line) => {
         if (line.trim().startsWith("- ")) {
@@ -337,14 +354,57 @@ export default function ChatWidgetPage() {
         }
       })
       .join("\n");
-    if (inList) text += "</ul>";
-    return text;
+    if (inList) formattedText += "</ul>";
+    return formattedText;
+  };
+
+  useEffect(() => {
+    const handleCitationClick = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (target && target.classList.contains("citation-mark")) {
+        const documentId = target.getAttribute("data-document-id");
+        if (documentId) {
+          highlightRelatedElements(documentId);
+          setTimeout(() => unhighlightRelatedElements(documentId), 2000);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleCitationClick);
+
+    return () => {
+      document.removeEventListener("click", handleCitationClick);
+    };
+  }, []);
+
+  const highlightRelatedElements = (documentId: string) => {
+    const relatedElements = document.querySelectorAll(
+      `[data-document-id="${documentId}"]`
+    );
+    relatedElements.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.filter = "contrast(0.8) saturate(6)";
+      }
+    });
+  };
+
+  const unhighlightRelatedElements = (documentId: string) => {
+    const relatedElements = document.querySelectorAll(
+      `[data-document-id="${documentId}"]`
+    );
+    relatedElements.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.filter = "";
+      }
+    });
   };
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
     setMessages((prev) => [...prev, { role: "user", content: inputMessage }]);
     setDocuments([]);
+    setCitedDocuments([]);
+    setColorMapping({});
     setInputMessage("");
     setIsLoading(true);
     setShowSkeleton(true);
@@ -416,7 +476,8 @@ export default function ChatWidgetPage() {
                 const formattedContent = formatLLMResponse(
                   assistantMessage,
                   currentCitations,
-                  currentColorMapping
+                  currentColorMapping,
+                  currentDocuments
                 );
                 setMessages((prev) => [
                   ...prev.slice(0, -1),
@@ -428,30 +489,31 @@ export default function ChatWidgetPage() {
                 const newColorMapping = createColorMapping(currentDocuments);
                 setColorMapping(newColorMapping);
                 currentColorMapping = newColorMapping;
-              } else if (event.eventType === "citation-generation") {
-                const newCitations = event.citations.map(
-                  (citation: Citation) => {
-                    const document = currentDocuments.find(
-                      (doc) => doc.id === citation.documentIds[0]
-                    );
-                    return {
-                      ...citation,
-                      documentUrl: document ? document.url : "",
-                    };
-                  }
-                );
-                currentCitations = [...currentCitations, ...newCitations];
-                setCitations(currentCitations);
-                const formattedContent = formatLLMResponse(
-                  assistantMessage,
-                  currentCitations,
-                  currentColorMapping
-                );
-                setMessages((prev) => [
-                  ...prev.slice(0, -1),
-                  { role: "assistant", content: formattedContent },
-                ]);
               }
+              // else if (event.eventType === "citation-generation") {
+              //   const newCitations = event.citations.map(
+              //     (citation: Citation) => {
+              //       const document = currentDocuments.find(
+              //         (doc) => doc.id === citation.documentIds[0]
+              //       );
+              //       return {
+              //         ...citation,
+              //         documentUrl: document ? document.url : "",
+              //       };
+              //     }
+              //   );
+              //   currentCitations = [...currentCitations, ...newCitations];
+              //   setCitations(currentCitations);
+              //   const formattedContent = formatLLMResponse(
+              //     assistantMessage,
+              //     currentCitations,
+              //     currentColorMapping
+              //   );
+              //   setMessages((prev) => [
+              //     ...prev.slice(0, -1),
+              //     { role: "assistant", content: formattedContent },
+              //   ]);
+              // }
             } catch (error) {
               console.error("Error parsing JSON:", error, "Line:", line);
             }
@@ -460,6 +522,17 @@ export default function ChatWidgetPage() {
 
         buffer = buffer.slice(startIndex);
       }
+
+      const finalFormattedContent = formatLLMResponse(
+        assistantMessage,
+        currentCitations,
+        currentColorMapping,
+        currentDocuments
+      );
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: "assistant", content: finalFormattedContent },
+      ]);
     } catch (error) {
       console.error("Error:", error);
       setMessages((prev) => [
@@ -581,51 +654,29 @@ export default function ChatWidgetPage() {
           {showSkeleton && <LoadingSkeleton />}
           <div ref={messagesEndRef} />
 
-          {documents.length > 0 && (
+          {citedDocuments.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
                 Sources
               </h3>
               <ul className="space-y-2">
-                {documents
-                  .slice(0, showAllSources ? undefined : 3)
-                  .map((doc, index) => (
-                    <li
-                      key={doc.id}
-                      className={`document-item flex cursor-pointer transition-colors border rounded-md border-zinc-200 px-2 py-2 duration-200`}
-                      data-document-id={doc.id}
-                    >
-                      <div
-                        className={`text-[11px] inline-flex rounded-full w-3 h-3 font-bold items-center justify-center mr-2 mt-1 ${
-                          colorMapping[doc.id].base
-                        } ${colorMapping[doc.id].hover}`}
-                      ></div>
-                      <span className="text-slate-700 dark:text-slate-200 font-medium w-fit">
-                        {index + 1}. {urlToBreadcrumb(doc.url)}
-                      </span>
-                      {/* <span className="text-slate-700 font-semibold text-right">({doc.similarity})</span> */}
-                      {/* <div className="w-16"><AdvancedHealthBar score={parseInt(doc.similarity)} /></div> */}
-                    </li>
-                  ))}
+                {citedDocuments.map((doc, index) => (
+                  <li
+                    key={doc.id}
+                    className={`document-item flex cursor-pointer transition-colors border rounded-md border-zinc-200 px-2 py-2 duration-200`}
+                    data-document-id={doc.id}
+                  >
+                    <div
+                      className={`text-[11px] inline-flex rounded-full w-3 h-3 font-bold items-center justify-center mr-2 mt-1 ${
+                        colorMapping[doc.id].base
+                      } ${colorMapping[doc.id].hover}`}
+                    ></div>
+                    <span className="text-slate-700 dark:text-slate-200 font-medium w-fit">
+                      {index + 1}. {urlToBreadcrumb(doc.url)}
+                    </span>
+                  </li>
+                ))}
               </ul>
-              {documents.length > 3 && (
-                <button
-                  className="mt-2 px-3 py-1 text-xs font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 flex items-center justify-center w-full"
-                  onClick={toggleShowAllSources}
-                >
-                  {showAllSources ? (
-                    <>
-                      <ChevronUp className="mr-1 h-3 w-3" />
-                      Fewer Sources
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="mr-1 h-3 w-3" />
-                      More Sources
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           )}
         </div>

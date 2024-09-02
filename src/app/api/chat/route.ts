@@ -83,9 +83,9 @@ export async function POST(req: Request) {
           .join(",")}
       ],
       "instructions": "Please respond to the user's query using the information from these documents. ` +
-      `Provide citations for every claim in the format [source: url]. ` +
+      `Provide citations for every claim in the format [source: id]. ` +
       `For example, if a sentence is based on information from document 1, ` +
-      `add [source: ${documents[0].url}] to the end of the sentence.."
+      `add [source: ${documents[0].id}] to the end of the sentence.."
     }`,
   };
 
