@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import type { Provider } from "next-auth/providers";
 
@@ -51,7 +50,6 @@ const providers: Provider[] = [
       return null;
     },
   }),
-  GitHub,
 ];
 
 export const providerMap = providers
@@ -72,6 +70,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 });
