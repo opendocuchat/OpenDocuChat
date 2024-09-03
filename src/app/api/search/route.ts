@@ -6,6 +6,7 @@ const together = new Together({
 });
 
 export async function GET(request: Request) {
+  console.log("search request");
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");
   if (!query)

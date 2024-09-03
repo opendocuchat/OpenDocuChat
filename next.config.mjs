@@ -65,26 +65,35 @@ const nextConfig = {
               try {
                 const deployedUrl =
                   process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
-                  process.env.NEXT_PUBLIC_VERCEL_URL ||
-                  "your-default-url.vercel.app";
+                  process.env.NEXT_PUBLIC_VERCEL_URL
 
                 const script = `
               (function () {
+                var container = document.createElement("div");
+                container.style.position = "fixed";
+                container.style.bottom = "20px";
+                container.style.right = "20px";
+                container.style.zIndex = "9998";
                 var iframe = document.createElement("iframe");
                 iframe.src = "https://${deployedUrl}/widget";
-                iframe.style.position = "fixed";
-                iframe.style.bottom = "20px";
-                iframe.style.right = "20px";
                 iframe.style.width = "48px";
                 iframe.style.height = "48px";
                 iframe.style.border = "none";
-                iframe.style.zIndex = "9999";
-                iframe.style.transition = "all 0.17s ease";
                 iframe.style.borderRadius = "50%";
                 iframe.style.overflow = "hidden";
                 iframe.style.boxShadow = "0px 3px 30px rgba(0, 0, 0, 0.2)";
+                iframe.style.transition = "all 0.3s ease";
+                var link = document.createElement("a");
+                link.href = "https://opendocuchat.com";
+                link.textContent = "Technical Documentation AI Chatbot by OpenDocuChat";
+                link.style.position = "absolute";
+                link.style.left = "-9999px";
+                link.style.top = "-9999px";
 
-                document.body.appendChild(iframe);
+                container.appendChild(iframe);
+                container.appendChild(link);
+
+                document.body.appendChild(container);
 
                 function updateIframeSize(width, height) {
                   var maxWidth = Math.min(parseInt(width), window.innerWidth * 0.9);

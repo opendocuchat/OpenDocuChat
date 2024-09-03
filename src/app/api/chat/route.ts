@@ -36,7 +36,8 @@ export async function POST(req: Request) {
   const apiBaseUrl =
     process.env.NODE_ENV === "development"
       ? `http://localhost:3000`
-      : `https://${process.env.VERCEL_URL}`;
+      : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  console.log("apiBaseUrl", apiBaseUrl);
   const documentsResponse = await fetch(
     `${apiBaseUrl}/api/search?query=${message}`
   );
