@@ -9,6 +9,7 @@ const publicPaths = [
   "/api/chat",
   "/api/search",
   "/api/auth/",
+  "/chat-widget-loader.js",
 ];
 
 const allowedOrigins = [
@@ -51,7 +52,6 @@ export default auth(async (req) => {
   const isAuthenticated = !!req.auth;
   const isPublicPage = isPublicPath(req.nextUrl.pathname);
 
-  // Handle authentication
   if (!isAuthenticated && !isPublicPage && req.nextUrl.pathname !== "/signin") {
     return NextResponse.redirect(new URL("/signin", req.url));
   }
@@ -79,5 +79,5 @@ export default auth(async (req) => {
 }) as any;
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
