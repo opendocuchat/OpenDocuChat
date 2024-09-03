@@ -33,7 +33,10 @@ export async function POST(req: Request) {
 
   await sql`INSERT INTO message (chat_id, sender, content) VALUES (${chatId}, 'USER', ${message})`;
 
-  const apiBaseUrl = process.env.VERCEL_URL || "http://localhost:3000";
+  const apiBaseUrl =
+    process.env.NODE_ENV === "development"
+      ? `http://localhost:3000`
+      : `https://${process.env.VERCEL_URL}`;
   const documentsResponse = await fetch(
     `${apiBaseUrl}/api/search?query=${message}`
   );
