@@ -38,6 +38,7 @@ const providers: Provider[] = [
       if (!userResponse.ok) return null;
 
       const userData = await userResponse.json();
+      console.log("userData", userData);
 
       if (userData.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN) {
         return {

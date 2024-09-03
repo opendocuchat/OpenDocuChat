@@ -48,7 +48,6 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export default auth(async (req) => {
-  console.log("req url", req.url);
   const isAuthenticated = !!req.auth;
   const isPublicPage = isPublicPath(req.nextUrl.pathname);
 
@@ -71,7 +70,6 @@ export default auth(async (req) => {
 
   if (req.nextUrl.pathname.startsWith("/api/chat") || req.nextUrl.pathname.startsWith("/api/search")) {
     const rateLimitSuccess = await handleRateLimit(req);
-    console.log("rateLimitSuccess", rateLimitSuccess);
     if (!rateLimitSuccess) {
       return new NextResponse("Too Many Requests", { status: 429 });
     }

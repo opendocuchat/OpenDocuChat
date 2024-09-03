@@ -70,3 +70,10 @@ export interface ScrapingRun {
   status: ScrapingStatus;
   created_at: Date;
 }
+
+export interface Account {
+  id: number;
+  github_id: number;
+  github_username: string;
+  created_at: Date;
+}

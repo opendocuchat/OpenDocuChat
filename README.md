@@ -72,7 +72,7 @@ graph TD
 **Auth & Security **
 - [x] set up auth.js with github oauth
 - [X] Enforce auth on (private) pages via middleware
-- [ ] Add vercel kv to deploy to vercel button
+- [X] Add vercel kv to deploy to vercel button
 - [ ] use db table to verify which users have access
 - [ ] Add custom URLs to CORS allowed origins
 - [ ] add OpenDocuChat github org ID to repo
