@@ -70,6 +70,9 @@ graph TD
 - [ ] Add full screen chat
 
 **Auth**
+- [ ] Add custom URLs to CORS allowed origins
+
+**Auth**
 - [x] set up auth.js with github oauth
 - [ ] Enforce auth on (private) pages via middleware
 - [ ] add OpenDocuChat github org ID to repo

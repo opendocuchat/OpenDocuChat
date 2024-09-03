@@ -1,3 +1,4 @@
+// app/login/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -55,6 +56,9 @@ export default function SignInPage() {
 
         if (!result?.error) {
           await update();
+          setDeviceCode(null);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          window.location.href = "/";
           return true;
         }
       } catch (error) {
@@ -172,10 +176,10 @@ export default function SignInPage() {
             >
               Click here to open GitHub
             </a>
-            {/* <p className="text-sm text-gray-600">
-              Waiting for authentication... This section will update
+            <p className="text-sm text-gray-600">
+              Waiting for authentication... This page will update
               automatically once you're signed in.
-            </p> */}
+            </p>
           </div>
         )}
       </div>
