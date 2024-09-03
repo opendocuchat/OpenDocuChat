@@ -178,7 +178,7 @@ export default function SignInPage() {
             </a>
             <p className="text-sm text-gray-600">
               Waiting for authentication... This page will update
-              automatically once you're signed in.
+              automatically once you&apos;re signed in.
             </p>
           </div>
         )}
