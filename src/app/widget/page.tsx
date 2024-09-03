@@ -71,17 +71,17 @@ export default function ChatWidgetPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const warmupAPI = async () => {
-      try {
-        await fetch("/api/warmup", { method: "GET" });
-      } catch (error) {
-        console.error("Error calling warmup API:", error);
-      }
-    };
+  // useEffect(() => {
+  //   const warmupAPI = async () => {
+  //     try {
+  //       await fetch("/api/warmup", { method: "GET" });
+  //     } catch (error) {
+  //       console.error("Error calling warmup API:", error);
+  //     }
+  //   };
 
-    warmupAPI();
-  }, []);
+  //   warmupAPI();
+  // }, []);
 
   useEffect(() => {
     const updateIframeSize = () => {

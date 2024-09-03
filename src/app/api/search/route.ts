@@ -5,8 +5,7 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
-export async function GET(request: Request) {
-  console.log("search request");
+export async function GET(request: Request) {  
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");
   if (!query)
