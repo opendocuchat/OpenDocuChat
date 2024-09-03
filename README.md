@@ -4,8 +4,7 @@
 
 # Open-source AI chatbot for technical documentation websites
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=opendocuchat&integration-ids=oac_PGzKMq4GfxF6TOqZfpFdrTXN&stores=%5B%7B%22type%22%3A%22postgres%22%2C%22envVarPrefix%22%3A%22MY_WEB%22%7D%5D)
-
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=opendocuchat&integration-ids=oac_PGzKMq4GfxF6TOqZfpFdrTXN&stores=%5B%7B%22type%22%3A%22postgres%22%2C%22envVarPrefix%22%3A%22MY_WEB%22%7D%2C%7B%22type%22%3A%22kv%22%7D%5D)
 
 ### TODO
 
@@ -72,11 +71,11 @@ graph TD
 
 **Auth & Security **
 - [x] set up auth.js with github oauth
-- [ ] Enforce auth on (private) pages via middleware
-- [ ] Add custom URLs to CORS allowed origins
+- [X] Enforce auth on (private) pages via middleware
 - [ ] Add vercel kv to deploy to vercel button
-- [ ] add OpenDocuChat github org ID to repo
 - [ ] use db table to verify which users have access
+- [ ] Add custom URLs to CORS allowed origins
+- [ ] add OpenDocuChat github org ID to repo
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
 
 **Other**
