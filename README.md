@@ -73,7 +73,7 @@ graph TD
 - [x] set up auth.js with github oauth
 - [X] Enforce auth on (private) pages via middleware
 - [X] Add vercel kv to deploy to vercel button
-- [ ] use db table to verify which users have access
+- [X] use db table to verify which users have access
 - [ ] Add custom URLs to CORS allowed origins
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
