@@ -57,7 +57,6 @@ export default function SignInPage() {
         if (!result?.error) {
           await update();
           setDeviceCode(null);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
           window.location.href = "/";
           return true;
         }

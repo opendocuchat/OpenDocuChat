@@ -69,12 +69,12 @@ graph TD
 - [ ] Implement llama with citations
 - [ ] Add full screen chat
 
-**Auth**
-- [ ] Add custom URLs to CORS allowed origins
 
-**Auth**
+**Auth & Security **
 - [x] set up auth.js with github oauth
 - [ ] Enforce auth on (private) pages via middleware
+- [ ] Add custom URLs to CORS allowed origins
+- [ ] Add vercel kv to deploy to vercel button
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] use db table to verify which users have access
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')

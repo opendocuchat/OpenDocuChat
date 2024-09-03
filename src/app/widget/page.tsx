@@ -535,13 +535,23 @@ export default function ChatWidgetPage() {
       ]);
     } catch (error) {
       console.error("Error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ]);
+      if (error instanceof Error && error.message.includes("Too Many Requests")) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "You've sent too many messages. Please wait a moment before sending more.",
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Sorry, I encountered an error. Please try again.",
+          },
+        ]);
+      }
     } finally {
       setIsLoading(false);
       setShowSkeleton(false);
