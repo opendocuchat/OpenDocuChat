@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import fs from 'fs';
 import path from 'path';
+import { sql } from '@vercel/postgres';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -9,6 +10,35 @@ const nextConfig = {
     if (isServer && !dev) {
       config.plugins.push({
         apply: (compiler) => {
+          compiler.hooks.afterEmit.tapPromise("SetupDeployingUser", async () => {
+            console.log("Setting up deploying user...");
+            const deployingUser = process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
+            console.log("Deploying user:", deployingUser);
+
+            if (!deployingUser) {
+              console.log("No deploying user found. Skipping user setup.");
+              return;
+            }
+
+            try {
+              const response = await fetch(`https://api.github.com/users/${deployingUser}`);
+              if (!response.ok) {
+                throw new Error('Failed to fetch GitHub user data');
+              }
+              const userData = await response.json();
+
+              await sql`
+                INSERT INTO account (github_id, github_username)
+                VALUES (${userData.id}, ${userData.login})
+                ON CONFLICT DO NOTHING
+              `;
+
+              console.log(`Deploying user ${deployingUser} has been set up successfully.`);
+            } catch (error) {
+              console.error('Error in setting up deploying user:', error);
+            }
+          });
+
           compiler.hooks.afterEmit.tapPromise("RunMigrations", async () => {
             console.log("Running database migrations...");
             try {
@@ -24,17 +54,14 @@ const nextConfig = {
           compiler.hooks.afterEmit.tapPromise("GenerateWidgetLoader", async () => {
             console.log("Generating chat-widget-loader.js...");
             try {
-              const productionUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL || 
+              const deployedUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL || 
                                     process.env.NEXT_PUBLIC_VERCEL_URL || 
                                     'your-default-url.vercel.app';
 
               const script = `
               (function () {
                 var iframe = document.createElement("iframe");
-                iframe.src =
-                  window.location.hostname === "localhost"
-                    ? "http://localhost:3000/widget"
-                    : "https://${productionUrl}/widget";
+                iframe.src = "https://${deployedUrl}/widget";
                 iframe.style.position = "fixed";
                 iframe.style.bottom = "20px";
                 iframe.style.right = "20px";
