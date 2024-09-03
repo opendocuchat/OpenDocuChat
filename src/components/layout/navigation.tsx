@@ -40,6 +40,13 @@ export function Navigation() {
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link href="/manage-account" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                User Access
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
       <div className="flex items-center">
