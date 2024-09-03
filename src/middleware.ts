@@ -16,7 +16,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:1313",
-  `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`,
+  `https://${process.env.VERCEL_URL}`,
 ];
 // TODO add production domains
 
