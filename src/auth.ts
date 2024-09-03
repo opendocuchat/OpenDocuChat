@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { Provider } from "next-auth/providers";
+import { sql } from "@vercel/postgres";
 
 const providers: Provider[] = [
   Credentials({
@@ -38,9 +39,13 @@ const providers: Provider[] = [
       if (!userResponse.ok) return null;
 
       const userData = await userResponse.json();
-      console.log("userData", userData);
 
-      if (userData.login === process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN) {
+      const { rows } = await sql`
+        SELECT * FROM account 
+        WHERE github_id = ${userData.id}
+      `;
+
+      if (rows.length > 0) {
         return {
           id: userData.id.toString(),
           name: userData.login,

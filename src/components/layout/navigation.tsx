@@ -11,6 +11,7 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { Button } from "../ui/button";
 
 export function Navigation() {
   const { data: session, status } = useSession();
@@ -43,7 +44,7 @@ export function Navigation() {
           <NavigationMenuItem>
             <Link href="/manage-account" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                User Access
+                Account
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
@@ -53,18 +54,11 @@ export function Navigation() {
         {status === "authenticated" ? (
           <>
             <span className="mr-4">Signed in as {session.user?.name}</span>
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600"
-            >
-              Sign Out
-            </button>
+            <Button variant="destructive" onClick={() => signOut()}>Sign Out</Button>
           </>
         ) : (
           <Link href="/signin" passHref>
-            <button className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">
-              Sign In
-            </button>
+            <Button onClick={() => window.location.href = "/signin"} variant="link">Sign In</Button>
           </Link>
         )}
       </div>
