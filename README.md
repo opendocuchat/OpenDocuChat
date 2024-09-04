@@ -84,6 +84,7 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 
 **Other**
 - [x] Polish github readme
+- [ ] Set up `support@opendocuchat.com` email forwarding
 - [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 
 </details>
