@@ -308,6 +308,7 @@ export default function ChatWidgetPage() {
     currentDocuments: Document[]
   ) => {
     let citedDocs: Document[] = [];
+    let citationCounter: { [id: string]: number } = {};
 
     let formattedText = text.replace(/\[source: (\d+)\]/g, (_, id) => {
       const index = currentDocuments.findIndex((doc) => doc.id === id);
@@ -318,8 +319,9 @@ export default function ChatWidgetPage() {
         };
         if (!citedDocs.some((doc) => doc.id === id)) {
           citedDocs.push(currentDocuments[index]);
+          citationCounter[id] = citedDocs.length;
         }
-        return `<span class="citation-mark cursor-pointer ${color.base} ${color.hover} px-1 rounded" data-document-id="${id}">[${citedDocs.length}]</span>`;
+        return `<span class="citation-mark cursor-pointer ${color.base} ${color.hover} px-1 rounded" data-document-id="${id}">[${citationCounter[id]}]</span>`;
       }
       return "";
     });
@@ -536,12 +538,16 @@ export default function ChatWidgetPage() {
       ]);
     } catch (error) {
       console.error("Error:", error);
-      if (error instanceof Error && error.message.includes("Too Many Requests")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Too Many Requests")
+      ) {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: "You've sent too many messages. Please wait a moment before sending more.",
+            content:
+              "You've sent too many messages. Please wait a moment before sending more.",
           },
         ]);
       } else {
