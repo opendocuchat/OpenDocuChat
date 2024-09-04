@@ -89,6 +89,7 @@ export async function POST(req: Request) {
       ],
       "instructions": "Please respond to the user's query using the information from these documents. ` +
       `Provide citations for every claim in the format [source: id]. ` +
+      `Never mention multiple ids in one citation. Always mention only one id per citation. ` +
       `For example, if a sentence is based on information from document 1, ` +
       `add [source: ${documents[0].id}] to the end of the sentence.."
     }`,

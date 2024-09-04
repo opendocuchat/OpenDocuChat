@@ -37,7 +37,6 @@ export default function ChatWidgetPage() {
   const [showSkeleton, setShowSkeleton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [citations, setCitations] = useState<Citation[]>([]);
   const [colorMapping, setColorMapping] = useState<ColorMap>({});
   const [chatId, setChatId] = useState("");
   const [colorSchemeReady, setColorSchemeReady] = useState(false);
@@ -110,7 +109,6 @@ export default function ChatWidgetPage() {
   const resetChat = () => {
     setMessages([{ role: "assistant", content: "Welcome to OpenDocuChat!" }]);
     setDocuments([]);
-    setCitations([]);
     setColorMapping({});
     setChatId("");
     setCitedDocuments([]);
@@ -133,85 +131,49 @@ export default function ChatWidgetPage() {
         hover:
           "hover:bg-amber-300 dark:hover:bg-amber-700 hover:saturate-150 hover:contrast-125",
       },
+      {
+        base: "bg-rose-200 dark:bg-rose-800",
+        hover:
+          "hover:bg-rose-300 dark:hover:bg-rose-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-violet-200 dark:bg-violet-800",
+        hover:
+          "hover:bg-violet-300 dark:hover:bg-violet-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-emerald-200 dark:bg-emerald-800",
+        hover:
+          "hover:bg-emerald-300 dark:hover:bg-emerald-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-indigo-200 dark:bg-indigo-800",
+        hover:
+          "hover:bg-indigo-300 dark:hover:bg-indigo-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-fuchsia-200 dark:bg-fuchsia-800",
+        hover:
+          "hover:bg-fuchsia-300 dark:hover:bg-fuchsia-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-teal-200 dark:bg-teal-800",
+        hover:
+          "hover:bg-teal-300 dark:hover:bg-teal-700 hover:saturate-150 hover:contrast-125",
+      },
+      {
+        base: "bg-orange-200 dark:bg-orange-800",
+        hover:
+          "hover:bg-orange-300 dark:hover:bg-orange-700 hover:saturate-150 hover:contrast-125",
+      },
     ];
-    const defaultColor = {
-      base: "bg-teal-100 dark:bg-teal-800",
-      hover: "hover:bg-teal-300 dark:hover:bg-teal-700",
-    };
-    const alternateColor = {
-      base: "bg-sky-100 dark:bg-sky-800",
-      hover: "hover:bg-sky-300 dark:hover:bg-sky-700",
-    };
 
     const newColorMapping: ColorMap = {};
     docs.forEach((doc, index) => {
-      if (index < 3) {
-        newColorMapping[doc.id] = colors[index];
-      } else {
-        newColorMapping[doc.id] =
-          index % 2 === 0 ? defaultColor : alternateColor;
-      }
+      newColorMapping[doc.id] = colors[index % colors.length];
     });
     return newColorMapping;
   };
-
-  // const highlightText = (
-  //   text: string,
-  //   messageCitations: Citation[],
-  //   colorMap: ColorMap
-  // ) => {
-  //   if (!messageCitations?.length) return text;
-
-  //   const sortedCitations = messageCitations.sort((a, b) => b.start - a.start);
-  //   let segments: {
-  //     text: string;
-  //     isHighlight: boolean;
-  //     color?: { base: string; hover: string };
-  //     documentId?: string;
-  //     documentUrl?: string;
-  //     citationIndex?: number;
-  //   }[] = [{ text, isHighlight: false }];
-
-  //   sortedCitations.forEach((citation, index) => {
-  //     const documentId = citation.documentIds[0];
-  //     const color = colorMap[documentId] || {
-  //       base: "bg-gray-200",
-  //       hover: "hover:bg-gray-300 hover:saturate-150 hover:contrast-125",
-  //     };
-  //     const segmentIndex = segments.findIndex(
-  //       (segment) =>
-  //         !segment.isHighlight && segment.text.includes(citation.text)
-  //     );
-
-  //     if (segmentIndex !== -1) {
-  //       const segment = segments[segmentIndex];
-  //       const startInSegment = segment.text.indexOf(citation.text);
-  //       const endInSegment = startInSegment + citation.text.length;
-  //       segments.splice(
-  //         segmentIndex,
-  //         1,
-  //         { text: segment.text.slice(0, startInSegment), isHighlight: false },
-  //         {
-  //           text: citation.text,
-  //           isHighlight: true,
-  //           color,
-  //           documentId,
-  //           documentUrl: citation.documentUrl,
-  //           citationIndex: index,
-  //         },
-  //         { text: segment.text.slice(endInSegment), isHighlight: false }
-  //       );
-  //     }
-  //   });
-
-  //   return segments
-  //     .map((segment) =>
-  //       segment.isHighlight
-  //         ? `<a href="${segment.documentUrl}" target="_parent" class="highlight ${segment.color?.base} ${segment.color?.hover} cursor-pointer" data-document-id="${segment.documentId}" data-citation-index="${segment.citationIndex}">${segment.text}</a>`
-  //         : segment.text
-  //     )
-  //     .join("");
-  // };
 
   useEffect(() => {
     const handleMouseEnter = (event: MouseEvent) => {
@@ -303,7 +265,6 @@ export default function ChatWidgetPage() {
 
   const formatLLMResponse = (
     text: string,
-    messageCitations: Citation[],
     colorMap: ColorMap,
     currentDocuments: Document[]
   ) => {
@@ -478,7 +439,6 @@ export default function ChatWidgetPage() {
                 }
                 const formattedContent = formatLLMResponse(
                   assistantMessage,
-                  currentCitations,
                   currentColorMapping,
                   currentDocuments
                 );
@@ -493,30 +453,6 @@ export default function ChatWidgetPage() {
                 setColorMapping(newColorMapping);
                 currentColorMapping = newColorMapping;
               }
-              // else if (event.eventType === "citation-generation") {
-              //   const newCitations = event.citations.map(
-              //     (citation: Citation) => {
-              //       const document = currentDocuments.find(
-              //         (doc) => doc.id === citation.documentIds[0]
-              //       );
-              //       return {
-              //         ...citation,
-              //         documentUrl: document ? document.url : "",
-              //       };
-              //     }
-              //   );
-              //   currentCitations = [...currentCitations, ...newCitations];
-              //   setCitations(currentCitations);
-              //   const formattedContent = formatLLMResponse(
-              //     assistantMessage,
-              //     currentCitations,
-              //     currentColorMapping
-              //   );
-              //   setMessages((prev) => [
-              //     ...prev.slice(0, -1),
-              //     { role: "assistant", content: formattedContent },
-              //   ]);
-              // }
             } catch (error) {
               console.error("Error parsing JSON:", error, "Line:", line);
             }
@@ -528,7 +464,6 @@ export default function ChatWidgetPage() {
 
       const finalFormattedContent = formatLLMResponse(
         assistantMessage,
-        currentCitations,
         currentColorMapping,
         currentDocuments
       );
@@ -696,32 +631,6 @@ export default function ChatWidgetPage() {
               </ul>
             </div>
           )}
-
-          {/* {citedDocuments.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
-                Sources
-              </h3>
-              <ul className="space-y-2">
-                {citedDocuments.map((doc, index) => (
-                  <li
-                    key={doc.id}
-                    className={`document-item flex cursor-pointer transition-colors border rounded-md border-zinc-200 px-2 py-2 duration-200`}
-                    data-document-id={doc.id}
-                  >
-                    <div
-                      className={`text-[11px] inline-flex rounded-full w-3 h-3 font-bold items-center justify-center mr-2 mt-1 ${
-                        colorMapping[doc.id].base
-                      } ${colorMapping[doc.id].hover}`}
-                    ></div>
-                    <span className="text-slate-700 dark:text-slate-200 font-medium w-fit">
-                      {index + 1}. {urlToBreadcrumb(doc.url)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )} */}
         </div>
       </div>
 
