@@ -94,4 +94,4 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
   <img src="./public/image/quicksave-logo.png" width="160px" alt="Quicksave logo" />
 </a>
 
-The upcoming AI chat in [Quicksave Toolkit documentation](https://tools.quicksave.fi) is co-developed and powered by OpenDocuChat.
+The upcoming AI chat in [Quicksave Toolkit](https://tools.quicksave.fi) documentation is co-developed and powered by OpenDocuChat.
