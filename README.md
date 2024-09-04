@@ -8,22 +8,28 @@
 
 <br>
 
-### Deploy on Vercel
+#### Deploy on Vercel
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=opendocuchat&integration-ids=oac_PGzKMq4GfxF6TOqZfpFdrTXN&stores=%5B%7B%22type%22%3A%22postgres%22%2C%22envVarPrefix%22%3A%22MY_WEB%22%7D%2C%7B%22type%22%3A%22kv%22%7D%5D)
 
 <br>
 
-## Instant support for free
+#### Instant support for free
 
-### Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)
+ Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)
 
-### Equel Social: [Install app and join group to chat with founders and peers](https://equel.me/Ha07PDysCMb)
+ Equel Social: [Install app and join group to chat with founders and peers](https://equel.me/Ha07PDysCMb)
+
+<br>
 
 ## Events
 
-📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat - Coming in October
+Coming soon
+📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat
 
 <br>
+
+## For Contributors
 
 <details>
 <summary>Development to-do list</summary>
@@ -80,3 +86,13 @@
 - [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 
 </details>
+
+<br>
+
+## Partners
+
+<a href="https://www.quicksave.fi">
+  <img src="./public/image/quicksave-logo.png" width="128px" alt="Quicksave logo" />
+</a>
+
+The upcoming AI chat in [Quicksave Toolkit documentation](https://tools.quicksave.fi) is co-developed and powered by OpenDocuChat.
