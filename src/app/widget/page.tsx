@@ -287,38 +287,41 @@ export default function ChatWidgetPage() {
       return "";
     });
 
-    setCitedDocuments(citedDocs);
-
     formattedText = formattedText.replace(
       /\*\*(.*?)\*\*/g,
       "<strong>$1</strong>"
     );
+
     let inList = false;
     formattedText = formattedText
       .split("\n")
       .map((line) => {
-        if (line.trim().startsWith("- ")) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ")) {
           if (!inList) {
             inList = true;
-            return (
-              '<ul class="list-disc pl-5"><li>' +
-              line.trim().substring(2) +
-              "</li>"
-            );
+            return `<ul class="list-disc pl-5"><li>${trimmedLine.substring(
+              2
+            )}</li>`;
           } else {
-            return "<li>" + line.trim().substring(2) + "</li>";
+            return `<li>${trimmedLine.substring(2)}</li>`;
           }
         } else {
           if (inList) {
             inList = false;
-            return "</ul>" + line;
+            return `</ul>${line}`;
           } else {
             return line;
           }
         }
       })
       .join("\n");
+
     if (inList) formattedText += "</ul>";
+
+    formattedText = formattedText.replace(/\n/g, "<br>");
+
+    setCitedDocuments(citedDocs);
     return formattedText;
   };
 

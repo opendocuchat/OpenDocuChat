@@ -95,7 +95,25 @@ export async function POST(req: Request) {
     }`,
   };
 
-  const messages = [systemMessage, ...userMessages, documentMessage];
+  const formattingInstructions = `
+    Please format your response using the following guidelines:
+    - Use '**' to indicate bold text. For example: **This is bold**.
+    - Use '- ' or '* ' at the beginning of a line to create list items.
+    - Use '\n' to indicate explicit line breaks where needed.
+    - Continue to use [source: id] for citations as before.
+    `;
+
+  const formattingMessage: Message = {
+    role: "system",
+    content: formattingInstructions,
+  };
+
+  const messages = [
+    systemMessage,
+    formattingMessage,
+    ...userMessages,
+    documentMessage,
+  ];
 
   const stream = await together.chat.completions.create({
     model: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
@@ -118,20 +136,12 @@ export async function POST(req: Request) {
       if (streamedChatResponse.object === "chat.completion.chunk") {
         for (const choice of streamedChatResponse.choices) {
           if (choice.delta) {
+            console.log("choice.delta", choice.delta);
             fullResponse += choice.delta.content;
           }
         }
       }
     }
-    //   if (streamedChatResponse.object === "text-generation") {
-    //     fullResponse += streamedChatResponse.text;
-    //   } else if (streamedChatResponse.eventType === "citation-generation") {
-    //     citations = citations.concat(streamedChatResponse.citations);
-    //   }
-
-    //   if (streamedChatResponse.eventType === "stream-end") {
-    //     break;
-    //   }
   })();
 
   const readableStream = new ReadableStream({
