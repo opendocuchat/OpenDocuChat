@@ -63,7 +63,9 @@ const nextConfig = {
             async () => {
               console.log("Generating chat-widget-loader.js...");
               try {
-                const deployedUrl = process.env.NEXT_PUBLIC_VERCEL_URL
+                const deployedUrl =
+                  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
+                  process.env.NEXT_PUBLIC_VERCEL_URL
 
                 const script = `
               (function () {

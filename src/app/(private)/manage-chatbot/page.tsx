@@ -9,13 +9,13 @@ const Page = () => {
 
   useEffect(() => {
     const generatedUrl =
-      window.location.hostname === "localhost"
+      process.env.NEXT_PUBLIC_VERCEL_ENV === "development"
         ? "http://localhost:3000/chat-widget-local.js"
-        : `https://${process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
-          ? process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
-          : process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"
-          ? process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL
-          : process.env.NEXT_PUBLIC_VERCEL_URL}/chat-widget-loader.js`;
+        : `https://${
+            process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
+              ? process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+              : process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL
+          }/chat-widget-loader.js`;
 
     setUrl(generatedUrl);
     setEmbedScript(`<script src="${generatedUrl}" async/>`);
