@@ -113,6 +113,7 @@ export default function ChatWidgetPage() {
     setCitations([]);
     setColorMapping({});
     setChatId("");
+    setCitedDocuments([]);
   };
 
   const createColorMapping = (docs: Document[]): ColorMap => {
@@ -689,6 +690,32 @@ export default function ChatWidgetPage() {
               </ul>
             </div>
           )}
+
+          {/* {citedDocuments.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+                Sources
+              </h3>
+              <ul className="space-y-2">
+                {citedDocuments.map((doc, index) => (
+                  <li
+                    key={doc.id}
+                    className={`document-item flex cursor-pointer transition-colors border rounded-md border-zinc-200 px-2 py-2 duration-200`}
+                    data-document-id={doc.id}
+                  >
+                    <div
+                      className={`text-[11px] inline-flex rounded-full w-3 h-3 font-bold items-center justify-center mr-2 mt-1 ${
+                        colorMapping[doc.id].base
+                      } ${colorMapping[doc.id].hover}`}
+                    ></div>
+                    <span className="text-slate-700 dark:text-slate-200 font-medium w-fit">
+                      {index + 1}. {urlToBreadcrumb(doc.url)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )} */}
         </div>
       </div>
 
