@@ -4,7 +4,7 @@
 
 <br>
 
-# Open-source AI chatbot for selling technical products
+# Open-source AI chat bubble for selling technical products
 
 <br>
 
