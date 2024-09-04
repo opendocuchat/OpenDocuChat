@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
+import { sql } from "@vercel/postgres";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -9,6 +10,42 @@ const nextConfig = {
     if (isServer && !dev) {
       config.plugins.push({
         apply: (compiler) => {
+          compiler.hooks.afterEmit.tapPromise(
+            "SetupDeployingUser",
+            async () => {
+              console.log("Setting up deploying user...");
+              const deployingUser = process.env.VERCEL_GIT_COMMIT_AUTHOR_LOGIN;
+              console.log("Deploying user:", deployingUser);
+
+              if (!deployingUser) {
+                console.log("No deploying user found. Skipping user setup.");
+                return;
+              }
+
+              try {
+                const response = await fetch(
+                  `https://api.github.com/users/${deployingUser}`
+                );
+                if (!response.ok) {
+                  throw new Error("Failed to fetch GitHub user data");
+                }
+                const userData = await response.json();
+
+                await sql`
+                INSERT INTO account (github_id, github_username)
+                VALUES (${userData.id}, ${userData.login})
+                ON CONFLICT DO NOTHING
+              `;
+
+                console.log(
+                  `Deploying user ${deployingUser} has been set up successfully.`
+                );
+              } catch (error) {
+                console.error("Error in setting up deploying user:", error);
+              }
+            }
+          );
+
           compiler.hooks.afterEmit.tapPromise("RunMigrations", async () => {
             console.log("Running database migrations...");
             try {
@@ -21,33 +58,42 @@ const nextConfig = {
             }
           });
 
-          compiler.hooks.afterEmit.tapPromise("GenerateWidgetLoader", async () => {
-            console.log("Generating chat-widget-loader.js...");
-            try {
-              const productionUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL || 
-                                    process.env.NEXT_PUBLIC_VERCEL_URL || 
-                                    'your-default-url.vercel.app';
+          compiler.hooks.afterEmit.tapPromise(
+            "GenerateWidgetLoader",
+            async () => {
+              console.log("Generating chat-widget-loader.js...");
+              try {
+                const deployedUrl =
+                  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
+                  process.env.NEXT_PUBLIC_VERCEL_URL
 
-              const script = `
+                const script = `
               (function () {
+                var container = document.createElement("div");
+                container.style.position = "fixed";
+                container.style.bottom = "20px";
+                container.style.right = "20px";
+                container.style.zIndex = "9998";
                 var iframe = document.createElement("iframe");
-                iframe.src =
-                  window.location.hostname === "localhost"
-                    ? "http://localhost:3000/widget"
-                    : "https://${productionUrl}/widget";
-                iframe.style.position = "fixed";
-                iframe.style.bottom = "20px";
-                iframe.style.right = "20px";
+                iframe.src = "https://${deployedUrl}/widget";
                 iframe.style.width = "48px";
                 iframe.style.height = "48px";
                 iframe.style.border = "none";
-                iframe.style.zIndex = "9999";
-                iframe.style.transition = "all 0.17s ease";
                 iframe.style.borderRadius = "50%";
                 iframe.style.overflow = "hidden";
                 iframe.style.boxShadow = "0px 3px 30px rgba(0, 0, 0, 0.2)";
+                iframe.style.transition = "all 0.3s ease";
+                var link = document.createElement("a");
+                link.href = "https://opendocuchat.com";
+                link.textContent = "Technical Documentation AI Chatbot by OpenDocuChat";
+                link.style.position = "absolute";
+                link.style.left = "-9999px";
+                link.style.top = "-9999px";
 
-                document.body.appendChild(iframe);
+                container.appendChild(iframe);
+                container.appendChild(link);
+
+                document.body.appendChild(container);
 
                 function updateIframeSize(width, height) {
                   var maxWidth = Math.min(parseInt(width), window.innerWidth * 0.9);
@@ -135,13 +181,20 @@ const nextConfig = {
               })();
               `;
 
-              fs.writeFileSync(path.join(process.cwd(), 'public', 'chat-widget-loader.js'), script);
-              console.log('chat-widget-loader.js has been generated.');
-            } catch (error) {
-              console.error("Failed to generate chat-widget-loader.js:", error);
-              process.exit(1);
+                fs.writeFileSync(
+                  path.join(process.cwd(), "public", "chat-widget-loader.js"),
+                  script
+                );
+                console.log("chat-widget-loader.js has been generated.");
+              } catch (error) {
+                console.error(
+                  "Failed to generate chat-widget-loader.js:",
+                  error
+                );
+                process.exit(1);
+              }
             }
-          });
+          );
         },
       });
     }

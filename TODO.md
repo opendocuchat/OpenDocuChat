@@ -36,7 +36,7 @@ graph TD
 - - [X] Improve cancellation & completion logic
 - - [X] Add selected URLs to index, with cost estimate
 - - [X] Add cleanup function for stuck scrapers
-- - [ ] Add scraping progress indicator (# scraped vs queued, ETA, ...)
+- - [X] Add scraping progress indicator (# scraped vs queued, ETA, ...)
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs
@@ -48,25 +48,26 @@ graph TD
 - - [ ] Index subset (include/exclude logic)
 
 **Search (RAG)**
+- [X] Basic RAG
 - [ ] Boost certain files/folders
 - [ ] Use reranker
 
 **Response**
 - [X] Add chat widget
 - [X] Update chat endpoints for basic llama & vercel pg 
+- [X] Implement llama with citations
 - [ ] Use llama function calling (https://docs.together.ai/docs/llama-3-function-calling)
 - [ ] Add warmup
 - [ ] Search query generation from context ("explain more" -> "explain more about x")
 - [ ] Add reranker
-- [ ] Implement llama with citations
 - [ ] Add full screen chat
 
 
-**Auth & Security **
+**Auth & Security**
 - [x] set up auth.js with github oauth
 - [X] Enforce auth on (private) pages via middleware
 - [X] Add vercel kv to deploy to vercel button
-- [ ] use db table to verify which users have access
+- [X] use db table to verify which users have access
 - [ ] Add custom URLs to CORS allowed origins
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')

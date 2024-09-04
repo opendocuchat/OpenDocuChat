@@ -9,15 +9,18 @@ const publicPaths = [
   "/api/chat",
   "/api/search",
   "/api/auth/",
+  "/chat-widget-loader.js",
 ];
 
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:1313",
-  `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`,
+  `https://${process.env.VERCEL_URL}`,
+  `https://${process.env.VERCEL_BRANCH_URL}`,
+  `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`,
 ];
-// TODO add production domains
+// TODO add external production domains
 
 const ratelimit = new Ratelimit({
   redis: kv,
@@ -51,7 +54,6 @@ export default auth(async (req) => {
   const isAuthenticated = !!req.auth;
   const isPublicPage = isPublicPath(req.nextUrl.pathname);
 
-  // Handle authentication
   if (!isAuthenticated && !isPublicPage && req.nextUrl.pathname !== "/signin") {
     return NextResponse.redirect(new URL("/signin", req.url));
   }

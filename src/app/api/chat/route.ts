@@ -33,7 +33,12 @@ export async function POST(req: Request) {
 
   await sql`INSERT INTO message (chat_id, sender, content) VALUES (${chatId}, 'USER', ${message})`;
 
-  const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3000";
+  const apiBaseUrl =
+    process.env.VERCEL_ENV === "development"
+      ? `http://localhost:3000`
+      : process.env.VERCEL_ENV === "preview"
+      ? `https://${process.env.VERCEL_BRANCH_URL}`
+      : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   const documentsResponse = await fetch(
     `${apiBaseUrl}/api/search?query=${message}`
   );
@@ -84,12 +89,31 @@ export async function POST(req: Request) {
       ],
       "instructions": "Please respond to the user's query using the information from these documents. ` +
       `Provide citations for every claim in the format [source: id]. ` +
+      `Never mention multiple ids in one citation. Always mention only one id per citation. ` +
       `For example, if a sentence is based on information from document 1, ` +
       `add [source: ${documents[0].id}] to the end of the sentence.."
     }`,
   };
 
-  const messages = [systemMessage, ...userMessages, documentMessage];
+  const formattingInstructions = `
+    Please format your response using the following guidelines:
+    - Use '**' to indicate bold text. For example: **This is bold**.
+    - Use '- ' or '* ' at the beginning of a line to create list items.
+    - Use '\n' to indicate explicit line breaks where needed.
+    - Continue to use [source: id] for citations as before.
+    `;
+
+  const formattingMessage: Message = {
+    role: "system",
+    content: formattingInstructions,
+  };
+
+  const messages = [
+    systemMessage,
+    formattingMessage,
+    ...userMessages,
+    documentMessage,
+  ];
 
   const stream = await together.chat.completions.create({
     model: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
@@ -112,20 +136,12 @@ export async function POST(req: Request) {
       if (streamedChatResponse.object === "chat.completion.chunk") {
         for (const choice of streamedChatResponse.choices) {
           if (choice.delta) {
+            console.log("choice.delta", choice.delta);
             fullResponse += choice.delta.content;
           }
         }
       }
     }
-    //   if (streamedChatResponse.object === "text-generation") {
-    //     fullResponse += streamedChatResponse.text;
-    //   } else if (streamedChatResponse.eventType === "citation-generation") {
-    //     citations = citations.concat(streamedChatResponse.citations);
-    //   }
-
-    //   if (streamedChatResponse.eventType === "stream-end") {
-    //     break;
-    //   }
   })();
 
   const readableStream = new ReadableStream({
