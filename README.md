@@ -8,24 +8,23 @@
 
 <br>
 
-#### Deploy on Vercel
+Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Explain&nbsp;technical&nbsp;terms&nbsp;&nbsp;·&nbsp; Answer&nbsp;technical&nbsp;questions&nbsp;&nbsp;·&nbsp; Direct&nbsp;users&nbsp;to&nbsp;the&nbsp;right&nbsp;product&nbsp;&nbsp;·&nbsp; Direct&nbsp;visitors&nbsp;to&nbsp;sales&nbsp;people&nbsp;&nbsp;·&nbsp; Boost&nbsp;page&nbsp;engagement&nbsp;&nbsp;·&nbsp; and more.
+
+#### Deploy on Vercel:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=opendocuchat&integration-ids=oac_PGzKMq4GfxF6TOqZfpFdrTXN&stores=%5B%7B%22type%22%3A%22postgres%22%2C%22envVarPrefix%22%3A%22MY_WEB%22%7D%2C%7B%22type%22%3A%22kv%22%7D%5D)
 
 <br>
 
-#### Instant support for free
+## Contact us
 
- Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)
+#### Equel Social: [Install app and join group chat with founders and peers](https://equel.me/Ha07PDysCMb)
 
- Equel Social: [Install app and join group to chat with founders and peers](https://equel.me/Ha07PDysCMb)
+#### Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)
 
-<br>
+#### Events:
 
-## Events
-
-Coming soon
-📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat
+📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat - *Coming soon*
 
 <br>
 
@@ -92,7 +91,7 @@ Coming soon
 ## Partners
 
 <a href="https://www.quicksave.fi">
-  <img src="./public/image/quicksave-logo.png" width="128px" alt="Quicksave logo" />
+  <img src="./public/image/quicksave-logo.png" width="160px" alt="Quicksave logo" />
 </a>
 
 The upcoming AI chat in [Quicksave Toolkit documentation](https://tools.quicksave.fi) is co-developed and powered by OpenDocuChat.
