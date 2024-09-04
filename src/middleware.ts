@@ -17,8 +17,9 @@ const allowedOrigins = [
   "http://localhost:3001",
   "http://localhost:1313",
   `https://${process.env.VERCEL_URL}`,
+  `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`,
 ];
-// TODO add production domains
+// TODO add external production domains
 
 const ratelimit = new Ratelimit({
   redis: kv,
