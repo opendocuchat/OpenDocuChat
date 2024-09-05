@@ -1,41 +1,31 @@
-<a href="https://www.opendocuchat.com">
-  <img src="./public/image/logo.svg" width="64px" alt="OpenDocuChat logo" />
-</a>
 
-<br>
+### TODO
 
-# Open-source AI chat bubble for selling technical products
+- [x] Set up the following project structure
 
-<br>
+```mermaid
+graph TD
+    A[Project Root] --> B[src]
+    A --> E[scripts]
+    E --> F[migrate-db.js]
+    A --> G[README.md]
+    A --> J[db]
+    J --> Y[migrations]
+    B --> H[app]
+    B --> C[components]
+    H --> L[api]
+    H --> M[page.tsx]
+    H --> N[widget]
+    C --> T[widget-embed-script.tsx]
+    B --> U[lib]
+    L --> I[migrate-db]
+    I --> K[route.ts]
+    N --> V[page.tsx]
+```
 
-Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Explain&nbsp;technical&nbsp;terms&nbsp;&nbsp;·&nbsp; Answer&nbsp;technical&nbsp;questions&nbsp;&nbsp;·&nbsp; Direct&nbsp;users&nbsp;to&nbsp;the&nbsp;right&nbsp;product&nbsp;&nbsp;·&nbsp; Direct&nbsp;visitors&nbsp;to&nbsp;sales&nbsp;people&nbsp;&nbsp;·&nbsp; Boost&nbsp;page&nbsp;engagement&nbsp;&nbsp;·&nbsp; And more.
+- [x] Set up database migrations. Custom function, support only up migrations, save status in a table in a schema. Read migrations from a folder. Example migration file name: `00001-create-data-source-table.sql`.
 
-<br>
-
-**Deploy on Vercel:**
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopendocuchat%2Fopendocuchat.git&project-name=opendocuchat&repository-name=opendocuchat&integration-ids=oac_PGzKMq4GfxF6TOqZfpFdrTXN&stores=%5B%7B%22type%22%3A%22postgres%22%2C%22envVarPrefix%22%3A%22MY_WEB%22%7D%2C%7B%22type%22%3A%22kv%22%7D%5D)
-
-<br>
-
-## Contact us
-
-**💬 Equel Social: [Install app and join group chat with founders and peers](https://equel.me/Ha07PDysCMb)**
-
-**✉️ Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)**
-
-**Events:**
-
-📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat - *Coming soon*
-
-<br>
-
-## For Contributors
-
-<details>
-<summary>Development to-do list</summary>
-
-<br>
+- [x] Test Together AI / Replica AI setup
 
 **Indexing**
 - [X] Scrape Documentation Website
@@ -83,18 +73,5 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
 
 **Other**
-- [x] Polish github readme
-- [ ] Set up `support@opendocuchat.com` email forwarding
+- [ ] Polish github readme
 - [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
-
-</details>
-
-<br>
-
-## Partners
-
-<a href="https://www.quicksave.fi">
-  <img src="./public/image/quicksave-logo.png" width="160px" alt="Quicksave logo" />
-</a>
-
-The upcoming AI chat in [Quicksave Toolkit](https://tools.quicksave.fi) documentation is co-developed and powered by OpenDocuChat.
