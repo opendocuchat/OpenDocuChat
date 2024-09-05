@@ -1,0 +1,6 @@
+CREATE TABLE chat_setting (
+    id SERIAL PRIMARY KEY,
+    system_prompt TEXT,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+)
