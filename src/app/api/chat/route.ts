@@ -136,7 +136,6 @@ export async function POST(req: Request) {
       if (streamedChatResponse.object === "chat.completion.chunk") {
         for (const choice of streamedChatResponse.choices) {
           if (choice.delta) {
-            console.log("choice.delta", choice.delta);
             fullResponse += choice.delta.content;
           }
         }

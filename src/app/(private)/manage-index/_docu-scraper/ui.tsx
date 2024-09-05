@@ -10,8 +10,6 @@ import {
   startScrapingRun,
   cancelScrapingRun,
   fetchScrapingResultsAndStatus,
-  startScraper,
-  CrawlerSettings,
 } from "./actions";
 import UrlTree, { UrlTreeNode } from "./url-tree";
 import { Slider } from "@/components/ui/slider";
@@ -159,22 +157,44 @@ export default function DocuScraper() {
     let fetchIntervalId: NodeJS.Timeout;
     let scrapeIntervalId: NodeJS.Timeout;
 
+    async function callScraper() {
+      try {
+        const response = await fetch("/api/scrape", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            scrapingRunId,
+            startUrl: url,
+            settings: crawlSettings,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Scraper response:", data);
+      } catch (error) {
+        console.error("Error calling scraper:", error);
+      }
+    }
+
     if (scrapingRunId && isLoading) {
       console.log("Fetching results & starting scraper...");
       fetchResults();
-      startScraper(scrapingRunId, url, crawlSettings);
+      callScraper();
       fetchIntervalId = setInterval(fetchResults, 3000);
-      scrapeIntervalId = setInterval(
-        () => startScraper(scrapingRunId, url, { ...crawlSettings }),
-        10000
-      );
+      scrapeIntervalId = setInterval(callScraper, 10000);
     }
 
     return () => {
       if (fetchIntervalId) clearInterval(fetchIntervalId);
       if (scrapeIntervalId) clearInterval(scrapeIntervalId);
     };
-  }, [scrapingRunId, isLoading, crawlSettings]);
+  }, [scrapingRunId, isLoading, crawlSettings, url]);
 
   useEffect(() => {
     if (isLoading) {

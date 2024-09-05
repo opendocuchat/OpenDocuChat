@@ -7,6 +7,7 @@ import puppeteer, { Browser, Page } from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
 import { ScrapingStatus, ScrapingUrl } from "@/types/database";
 import { cancelScrapingUrls } from "@/app/(private)/manage-index/_docu-scraper/actions";
+import { auth } from "@/auth";
 
 interface CrawlSettings {
   stayOnDomain: boolean;
@@ -17,8 +18,13 @@ interface CrawlSettings {
 
 export const maxDuration = 60;
 
-export async function POST(request: NextRequest) {
-  const { scrapingRunId, startUrl, settings } = await request.json();
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { scrapingRunId, startUrl, settings } = await req.json();
 
   await scrapeUrlLoop(scrapingRunId, startUrl, settings).catch(console.error);
 
@@ -46,7 +52,10 @@ async function scrapeUrlLoop(
     while (Date.now() - startTime < timeoutDuration) {
       await resetStuckScrapingUrls(pgClient, scrapingRunId);
 
-      const isCancelled = await checkIfCancelledScrapingRun(pgClient, scrapingRunId);
+      const isCancelled = await checkIfCancelledScrapingRun(
+        pgClient,
+        scrapingRunId
+      );
       if (isCancelled) {
         await cancelScrapingUrls(scrapingRunId);
         return;

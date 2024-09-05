@@ -84,33 +84,10 @@ export async function startScrapingRun(
     );
     await addUrlToScrape(scrapingRunId, startUrl);
 
-    startScraper(scrapingRunId, startUrl, settings);
-
     return { success: true, scrapingRunId, dataSourceId };
   } catch (error) {
     console.error("Error starting scraper:", error);
     return { success: false, error: "Failed to start scraping" };
-  }
-}
-
-export async function startScraper(
-  scrapingRunId: number,
-  startUrl: string,
-  settings: CrawlerSettings
-) {
-  try {
-    const url = `${
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    }/api/scrape`;
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scrapingRunId, startUrl, settings }),
-    }).catch(console.error);
-  } catch (error) {
-    console.error("Crawling failed:", error);
   }
 }
 

@@ -1,3 +1,5 @@
+// app/middleware.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -51,10 +53,13 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export default auth(async (req) => {
-  const isAuthenticated = !!req.auth;
+  if (req.nextUrl.pathname === "/api/scrape") {
+    return NextResponse.next();
+  }
+
   const isPublicPage = isPublicPath(req.nextUrl.pathname);
 
-  if (!isAuthenticated && !isPublicPage && req.nextUrl.pathname !== "/signin") {
+  if (!isPublicPage && req.nextUrl.pathname !== "/signin" && !req.auth) {
     return NextResponse.redirect(new URL("/signin", req.url));
   }
 
@@ -70,7 +75,10 @@ export default auth(async (req) => {
     setCORSHeaders(req, response);
   }
 
-  if (req.nextUrl.pathname.startsWith("/api/chat") || req.nextUrl.pathname.startsWith("/api/search")) {
+  if (
+    req.nextUrl.pathname.startsWith("/api/chat") ||
+    req.nextUrl.pathname.startsWith("/api/search")
+  ) {
     const rateLimitSuccess = await handleRateLimit(req);
     if (!rateLimitSuccess) {
       return new NextResponse("Too Many Requests", { status: 429 });
