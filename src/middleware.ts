@@ -53,14 +53,19 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export default auth(async (req) => {
-  if (req.nextUrl.pathname === "/api/scrape") {
-    return NextResponse.next();
-  }
-
+  
   const isPublicPage = isPublicPath(req.nextUrl.pathname);
+  const isApiRoute = req.nextUrl.pathname.startsWith("/api");
 
-  if (!isPublicPage && req.nextUrl.pathname !== "/signin" && !req.auth) {
-    return NextResponse.redirect(new URL("/signin", req.url));
+  if (!isPublicPage && req.nextUrl.pathname !== "/signin") {
+    if (!req.auth) {
+      if (isApiRoute) {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+      return NextResponse.redirect(new URL("/signin", req.url));
+    } else if (isApiRoute) {
+      return NextResponse.next();
+    }
   }
 
   let response = NextResponse.next();

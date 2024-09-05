@@ -4,7 +4,7 @@
 
 <br>
 
-# Open-source AI chat for tech product promotion
+# Open-source AI chat for technical product promotion
 
 <br>
 
