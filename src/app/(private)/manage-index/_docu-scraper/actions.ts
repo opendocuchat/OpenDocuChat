@@ -31,10 +31,9 @@ async function getOrCreateDataSource(
     return existingResult.rows[0];
   }
 
-  const name = new URL(url).hostname;
   const newResult = await sql<DataSource>`
     INSERT INTO data_source (name, url, type)
-    VALUES (${name}, ${url}, ${type})
+    VALUES (${url}, ${url}, ${type})
     RETURNING id, name, url, type
   `;
 
