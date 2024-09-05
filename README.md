@@ -4,7 +4,7 @@
 
 <br>
 
-# Open-source AI chat bubble for selling technical products
+# Open-source AI chat for tech product promotion
 
 <br>
 
@@ -26,7 +26,7 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 
 **Events:**
 
-📍 Berlin, Germany - Co-working Saturdays by OpenDocuChat - *Coming soon*
+📍 Berlin, Germany & Seoul, South Korea - Co-working Saturdays by OpenDocuChat - *Coming soon*
 
 <br>
 
@@ -78,13 +78,15 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 - [X] Enforce auth on (private) pages via middleware
 - [X] Add vercel kv to deploy to vercel button
 - [X] use db table to verify which users have access
+- [ ] Add short-lived tokens generated server-side for each chat session
 - [ ] Add custom URLs to CORS allowed origins
 - [ ] add OpenDocuChat github org ID to repo
 - [ ] automate saving auth.js secret to vercel using: vercel env add AUTH_SECRET production < <(grep AUTH_SECRET .env.local | sed -n 's/.*="\([^"]*\)".*/\1/p' | tr -d '\n')
 
 **Other**
 - [x] Polish github readme
-- [ ] Set up `support@opendocuchat.com` email forwarding
+- [x] Set up `support@opendocuchat.com` email forwarding
+- [ ] Add QA module (e.g. DSPy based, with training data generation via LLM reviewing individual pages)
 - [ ] Automate local dev setup: make auto-generated Together AI env var also available in dev environment (is prod and stag per default). E.g. make post-deploy script running vercel link & vercel env pull --environment=Production
 
 </details>
