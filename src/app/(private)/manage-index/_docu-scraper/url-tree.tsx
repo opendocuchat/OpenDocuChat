@@ -135,7 +135,7 @@ const UrlTree: React.FC<UrlTreeProps> = ({
   const renderTree = (node: UrlTreeNode, depth: number = 0) => (
     <div key={node.path} className={`ml-${depth * 4}`}>
       <div className="flex items-center justify-between py-1">
-        <div className="flex items-center">
+        <div className="flex items-center flex-grow">
           {node.children && node.children.length > 0 && (
             <Button
               variant="ghost"
@@ -162,12 +162,14 @@ const UrlTree: React.FC<UrlTreeProps> = ({
           <label htmlFor={node.path} className="ml-2 truncate">
             {node.path === "" ? "/" : `${node.name.split(" (")[0]}`}
           </label>
-          {node.scrapeUrlId && (
+        </div>
+        <div className="flex items-center">
+          {node.scrapeUrlId && node.status === ScrapingStatus.COMPLETED && (
             <Button
               variant="ghost"
               size="xs"
               onClick={() => handleFetchContent(node.scrapeUrlId!)}
-              className="ml-2"
+              className="mr-3"
             >
               {contentMap[node.scrapeUrlId!] === undefined
                 ? "Fetch Content"
@@ -176,12 +178,12 @@ const UrlTree: React.FC<UrlTreeProps> = ({
                 : "Show Content"}
             </Button>
           )}
+          {node.status && (
+            <span className={`mr-2 ${getStatusColor(node.status)}`}>
+              {node.status}
+            </span>
+          )}
         </div>
-        {node.status && (
-          <span className={`ml-2 ${getStatusColor(node.status)}`}>
-            {node.status}
-          </span>
-        )}
       </div>
       {node.scrapeUrlId &&
         contentMap[node.scrapeUrlId] !== undefined &&
