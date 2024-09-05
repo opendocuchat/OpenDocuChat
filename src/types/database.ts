@@ -37,6 +37,13 @@ export interface Chat {
   created_at: Date;
 }
 
+export interface ChatSetting {
+  id: number;
+  system_prompt: string;
+  updated_at: Date;
+  created_at: Date;
+}
+
 export interface Citation {
   id: number;
   message_id: number;

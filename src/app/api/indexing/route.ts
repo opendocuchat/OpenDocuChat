@@ -81,7 +81,7 @@ export async function POST(request: Request) {
             } catch (error) {
               attempts++;
               const delay = retryDelay * Math.pow(2, attempts);
-              console.log(`Error occurred. Retrying in ${delay}ms...`);
+              console.log(`Error occurred. Retrying in ${delay}ms.... error:`, error);
               await new Promise((resolve) => setTimeout(resolve, delay));
             }
           }

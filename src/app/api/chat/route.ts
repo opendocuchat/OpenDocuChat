@@ -53,9 +53,10 @@ export async function POST(req: Request) {
     similarity: `${Math.round(parseFloat(doc.similarity) * 100)}%`,
   }));
 
+  const systemPromptResponse = await sql`SELECT system_prompt FROM chat_setting LIMIT 1`;
   const systemMessage: Message = {
     role: "system" as const,
-    content: "You are a helpful chatbot for OpenDocuChat",
+    content: systemPromptResponse.rows[0].system_prompt,
   };
 
   const chatHistoryResponse = await sql`
