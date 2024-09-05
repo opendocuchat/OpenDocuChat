@@ -53,7 +53,6 @@ export default function DocuScraper() {
   const handleSelectionChange = (
     selectedPaths: { url: string; id: number }[]
   ) => {
-    console.log("Selected paths:", selectedPaths);
     setSelectedUrls(selectedPaths);
   };
 

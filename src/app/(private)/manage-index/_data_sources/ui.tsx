@@ -30,6 +30,7 @@ import { useState, useCallback } from "react";
 import UrlTree, { UrlTreeNode } from "../_docu-scraper/url-tree";
 import { fetchScrapingResultsAndStatus } from "../_docu-scraper/actions";
 import { getDataSources, getScrapingRunsAndUrls } from "./actions";
+import IndexingUI from "../_indexing/ui";
 
 export default function DataSources() {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -44,6 +45,21 @@ export default function DataSources() {
   const [selectedRun, setSelectedRun] = useState<ScrapingRun | null>(null);
   const [fileTree, setFileTree] = useState<UrlTreeNode | null>(null);
   const [isLoadingFileTree, setIsLoadingFileTree] = useState(false);
+  const [showIndexingUI, setShowIndexingUI] = useState(false);
+  const [selectedUrls, setSelectedUrls] = useState<
+    { url: string; id: number }[]
+  >([]);
+
+  const handleIndexingComplete = () => {
+    console.log("Indexing completed");
+    setShowIndexingUI(false);
+  };
+
+  const handleSelectionChange = (
+    selectedPaths: { url: string; id: number }[]
+  ) => {
+    setSelectedUrls(selectedPaths);
+  };
 
   const showDataSources = async () => {
     setIsLoadingDataSources(true);
@@ -177,11 +193,28 @@ export default function DataSources() {
                                 <Loader2 className="h-8 w-8 animate-spin" />
                               </div>
                             ) : (
-                              <UrlTree
-                                tree={fileTree!}
-                                onSelectionChange={() => {}}
-                                isLoading={isLoadingFileTree}
-                              />
+                              <div>
+                                <UrlTree
+                                  tree={fileTree!}
+                                  onSelectionChange={handleSelectionChange}
+                                  // onSelectionChange={() => {}}
+                                  isLoading={isLoadingFileTree}
+                                />
+
+                                <Button
+                                  onClick={() => setShowIndexingUI(true)}
+                                  disabled={
+                                    selectedUrls.length === 0 || isLoading
+                                  }
+                                >
+                                  Proceed to Indexing
+                                </Button>
+
+                                <IndexingUI
+                                  selectedUrlIds={selectedUrls.map((u) => u.id)}
+                                  onIndexingComplete={handleIndexingComplete}
+                                />
+                              </div>
                             )
                           ) : (
                             <Table>
