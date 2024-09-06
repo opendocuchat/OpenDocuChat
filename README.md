@@ -60,6 +60,7 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 
 **Search (RAG)**
 - [X] Basic RAG
+- [ ] Check for token limit
 - [ ] Boost certain files/folders
 - [ ] Use reranker
 

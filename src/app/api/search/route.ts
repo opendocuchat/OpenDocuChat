@@ -27,9 +27,9 @@ export async function GET(request: Request) {
     response = await sql`
       SELECT id, url, content, 1 - (cosine_distance(embedding, ${vectorQuery})) AS similarity
       FROM document
-      WHERE active = TRUE AND 1 - (cosine_distance(embedding, ${vectorQuery})) > 0.3
+      WHERE active = TRUE AND 1 - (cosine_distance(embedding, ${vectorQuery})) > 0.2
       ORDER BY similarity DESC
-      LIMIT 10
+      LIMIT 20
       `;
   } catch (error) {
     console.error("Supabase error:", error);
