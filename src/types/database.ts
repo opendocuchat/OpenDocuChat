@@ -53,11 +53,19 @@ export interface Citation {
 }
 
 export enum ScrapingStatus {
-  QUEUED = 'QUEUED',
-  PROCESSING = 'PROCESSING',
-  CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED'
+  QUEUED = "QUEUED",
+  PROCESSING = "PROCESSING",
+  CANCELLED = "CANCELLED",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+}
+
+export enum IndexingStatus {
+  NOT_INDEXED = "NOT_INDEXED",
+  QUEUED = "QUEUED",
+  PROCESSING = "PROCESSING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
 }
 
 export interface ScrapingUrl {
@@ -65,7 +73,7 @@ export interface ScrapingUrl {
   scraping_run_id: number;
   url: string;
   status: ScrapingStatus;
-  is_indexed: boolean;
+  indexing_status: IndexingStatus;
   content: string;
   created_at: Date;
   updated_at: Date;
