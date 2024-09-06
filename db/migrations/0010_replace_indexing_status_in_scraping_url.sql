@@ -16,4 +16,10 @@ SET indexing_status = CASE
 END;
 
 ALTER TABLE scraping_url
+DROP CONSTRAINT unique_indexed_url;
+
+ALTER TABLE scraping_url
+ADD CONSTRAINT unique_indexed_url UNIQUE (url, indexing_status);
+
+ALTER TABLE scraping_url
 DROP COLUMN is_indexed;
