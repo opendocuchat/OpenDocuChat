@@ -73,6 +73,7 @@ export async function POST(request: Request) {
 
           while (attempts < maxAttempts) {
             try {
+              console.log(`Getting embedding for chunk length: ${chunk.length}`);
               const embeddingResponse = await together.embeddings.create({
                 model: "BAAI/bge-large-en-v1.5",
                 input: [chunk],
@@ -101,8 +102,8 @@ export async function POST(request: Request) {
       const updateResult = await client.query(
         `
             UPDATE scraping_url
-            SET is_indexed = FALSE
-            WHERE url = $1 AND is_indexed = TRUE
+            SET indexing_status = "NOT_INDEXED"
+            WHERE url = $1 AND indexing_status = "COMPLETED"
             RETURNING id
           `,
         [url]
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
       await client.query(
         `
             UPDATE scraping_url
-            SET is_indexed = TRUE
+            SET indexing_status = "COMPLETED"
             WHERE id = $1
           `,
         [id]
