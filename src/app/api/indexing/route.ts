@@ -34,8 +34,6 @@ export async function POST(request: Request) {
 
     const scrapingUrls = result.rows;
 
-    console.log(`Processing ${scrapingUrls.length} URLs for indexing`);
-    // Fetch all data_source_ids in one query
     const scraping_run_ids = scrapingUrls.map((url) => url.scraping_run_id);
     const dataSourceResult = await client.query(
       `
@@ -53,14 +51,11 @@ export async function POST(request: Request) {
     const urlChunkMap: Map<string, number[]> = new Map();
 
     for (const { id, url, content, scraping_run_id } of scrapingUrls) {
-      console.log(`\nProcessing URL: ${url}`);
       if (!content) {
-        console.log(`Empty content for URL: ${url}. Skipping indexing.`);
         continue;
       }
 
       const data_source_id = dataSourceMap.get(scraping_run_id);
-      console.log(`Data source ID: ${data_source_id}`);
 
       const contentChunks = splitTextIntoChunks(
         content,
@@ -68,12 +63,8 @@ export async function POST(request: Request) {
         OVERLAP_TOKENS
       );
 
-      console.log(`Generated ${contentChunks.length} chunks for URL: ${url}`);
 
       if (contentChunks.length === 0) {
-        console.log(
-          `No valid content chunks for URL: ${url}. Skipping indexing.`
-        );
         continue;
       }
 
@@ -85,10 +76,8 @@ export async function POST(request: Request) {
         )
       );
 
-      console.log(`Total batched chunks: ${batchedChunks.length}`);
 
       if (batchedChunks.length >= MAX_BATCH_SIZE) {
-        console.log(`\nProcessing batch of ${batchedChunks.length} chunks`);
         await processEmbeddingBatch(
           batchedChunks,
           urlChunkMap,
@@ -99,14 +88,10 @@ export async function POST(request: Request) {
         );
         batchedChunks.length = 0;
         urlChunkMap.clear();
-        console.log(
-          "Batch processing complete. Cleared batch and URL-chunk map."
-        );
       }
     }
 
     if (batchedChunks.length > 0) {
-      console.log(`\nProcessing final batch of ${batchedChunks.length} chunks`);
       await processEmbeddingBatch(
         batchedChunks,
         urlChunkMap,
@@ -137,12 +122,9 @@ async function processEmbeddingBatch(
   created_at: string,
   scrapingUrls: any[]
 ) {
-  console.log(`Getting embeddings for ${batchedChunks.length} chunks`);
   const embeddings = await getEmbeddings(batchedChunks);
 
   for (const [url, chunkIndices] of Array.from(urlChunkMap.entries())) {
-    console.log(`\nProcessing embeddings for URL: ${url}`);
-    console.log(`Number of chunks for this URL: ${chunkIndices.length}`);
 
     const urlEmbeddings = chunkIndices.map((index) => embeddings[index]);
     const finalEmbedding = averageEmbeddings(urlEmbeddings);
@@ -153,7 +135,6 @@ async function processEmbeddingBatch(
     const data_source_id = dataSourceMap.get(scraping_run_id);
 
     if (data_source_id) {
-      console.log(`Updating database for URL: ${url}`);
       await updateDatabase(
         client,
         url,
@@ -183,7 +164,7 @@ async function getEmbeddings(chunks: string[]): Promise<number[][]> {
     } catch (error) {
       attempts++;
       const delay = retryDelay * Math.pow(2, attempts);
-      console.log(`Error occurred. Retrying in ${delay}ms.... error:`, error);
+      console.error(`Error occurred. Retrying in ${delay}ms.... error:`, error);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -242,7 +223,6 @@ async function updateDatabase(
     );
 
     await client.query("COMMIT");
-    console.log("Indexed URL:", url);
   } catch (error) {
     await client.query("ROLLBACK");
     console.error(`Error updating database for URL ${url}:`, error);

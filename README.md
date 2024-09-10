@@ -49,6 +49,7 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 - - [X] Add scraping progress indicator (# scraped vs queued, ETA, ...)
 - - [X] Add indexing queue
 - - [X] Update scraping_url is_indexed when deleting from search index
+- - [ ] Increase speed
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs

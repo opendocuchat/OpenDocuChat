@@ -57,8 +57,7 @@ export default function DocuScraper() {
   };
 
   const handleIndexingComplete = () => {
-    console.log("Indexing completed");
-    setShowIndexingUI(false);
+    // setShowIndexingUI(false);
   };
 
   const handleExcludeFileTypesChange = (
@@ -253,6 +252,7 @@ export default function DocuScraper() {
                 />
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Discovering..." : "Discover URLs"}
+                  {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
                 </Button>
               </form>
 
@@ -347,7 +347,6 @@ export default function DocuScraper() {
                     <CardHeader>
                       <CardTitle className="flex">
                         Scraping Progress
-                        <Loader2 className="pl-2 mr-2 h-4 w-4 animate-spin" />
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
