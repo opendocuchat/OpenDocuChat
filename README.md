@@ -20,7 +20,7 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 
 ## Contact us
 
-**💬 Equel Social: [Install app and join group chat with founders and peers](https://equel.me/Ha07PDysCMb)**
+*TODO: Group chat*
 
 **✉️ Email: [support@opendocuchat.com](mailto:support@opendocuchat.com)**
 
