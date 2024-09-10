@@ -1,10 +1,13 @@
-// app/(private)/manage-index/_indexing/ui.tsx
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getUrlContentTokenCount } from "./actions";
+import {
+  getUrlContentTokenCount,
+  queueUrlsForIndexing,
+  getIndexingProgress,
+} from "./actions";
+import { Loader2 } from "lucide-react";
 
 interface IndexingUiProps {
   selectedUrlIds: number[];
@@ -12,13 +15,16 @@ interface IndexingUiProps {
 }
 
 interface IndexingProgress {
-  stage: "estimating" | "indexing" | "completed" | null;
+  stage: "estimating" | "indexing" | "completed" | "no_new_urls" | null;
   totalFiles: number;
   processedFiles: number;
   totalTokens: number;
+  newlyQueuedCount: number;
+  alreadyIndexedCount: number;
 }
 
 const COST_PER_1M_TOKENS = 0.016;
+const INDEXING_INTERVAL = 10000;
 
 export default function IndexingUI({
   selectedUrlIds,
@@ -31,9 +37,17 @@ export default function IndexingUI({
     totalFiles: 0,
     processedFiles: 0,
     totalTokens: 0,
+    newlyQueuedCount: 0,
+    alreadyIndexedCount: 0,
   });
   const [costEstimate, setCostEstimate] = useState<number | null>(null);
   const [tokenEstimate, setTokenEstimate] = useState<number | null>(null);
+  const [isIndexingTriggered, setIsIndexingTriggered] = useState(false);
+  const [queuedIds, setQueuedIds] = useState<number[]>([]);
+  const [indexingProgress, setIndexingProgress] = useState({
+    queued: 0,
+    completed: 0,
+  });
 
   useEffect(() => {
     if (selectedUrlIds.length > 0) {
@@ -45,11 +59,61 @@ export default function IndexingUI({
         totalFiles: 0,
         processedFiles: 0,
         totalTokens: 0,
+        newlyQueuedCount: 0,
+        alreadyIndexedCount: 0,
       });
       setCostEstimate(null);
       setTokenEstimate(null);
     }
   }, [selectedUrlIds]);
+
+  useEffect(() => {
+    let progressIntervalId: NodeJS.Timeout;
+    let indexingIntervalId: NodeJS.Timeout;
+
+    const fetchProgress = async () => {
+      if (isIndexingTriggered && queuedIds.length > 0) {
+        const progress = await getIndexingProgress(queuedIds);
+        setIndexingProgress(progress);
+
+        if (progress.queued === 0 && progress.completed === queuedIds.length) {
+          clearInterval(progressIntervalId);
+          clearInterval(indexingIntervalId);
+          setIsIndexing(false);
+          setProgress((prev) => ({ ...prev, stage: "completed" }));
+          onIndexingComplete();
+        }
+      }
+    };
+
+    const triggerIndexing = async () => {
+      try {
+        const result = await fetch("/api/indexing", {
+          method: "POST",
+        });
+
+        if (result.ok) {
+          console.log("Indexing triggered successfully");
+        } else {
+          console.error("Failed to trigger indexing:", result.statusText);
+        }
+      } catch (error) {
+        console.error("Error triggering indexing:", error);
+      }
+    };
+
+    if (isIndexingTriggered) {
+      fetchProgress();
+      triggerIndexing();
+      progressIntervalId = setInterval(fetchProgress, 5000);
+      indexingIntervalId = setInterval(triggerIndexing, 10000);
+    }
+
+    return () => {
+      if (progressIntervalId) clearInterval(progressIntervalId);
+      if (indexingIntervalId) clearInterval(indexingIntervalId);
+    };
+  }, [isIndexingTriggered, queuedIds, onIndexingComplete]);
 
   const estimateCost = async () => {
     setIsEstimating(true);
@@ -58,6 +122,8 @@ export default function IndexingUI({
       totalFiles: selectedUrlIds.length,
       processedFiles: 0,
       totalTokens: 0,
+      newlyQueuedCount: 0,
+      alreadyIndexedCount: 0,
     });
 
     try {
@@ -71,6 +137,8 @@ export default function IndexingUI({
         totalFiles: selectedUrlIds.length,
         processedFiles: selectedUrlIds.length,
         totalTokens,
+        newlyQueuedCount: 0,
+        alreadyIndexedCount: 0,
       });
     } catch (error) {
       console.error("Error estimating cost:", error);
@@ -79,6 +147,8 @@ export default function IndexingUI({
         totalFiles: 0,
         processedFiles: 0,
         totalTokens: 0,
+        newlyQueuedCount: 0,
+        alreadyIndexedCount: 0,
       });
     } finally {
       setIsEstimating(false);
@@ -92,49 +162,36 @@ export default function IndexingUI({
       totalFiles: selectedUrlIds.length,
       processedFiles: 0,
       totalTokens: tokenEstimate || 0,
+      newlyQueuedCount: 0,
+      alreadyIndexedCount: 0,
     });
 
-    const batchSize = 10;
-    const batches = Array(Math.ceil(selectedUrlIds.length / batchSize))
-      .fill(0)
-      .map((_, index) =>
-        selectedUrlIds.slice(index * batchSize, (index + 1) * batchSize)
-      );
-
     try {
-      await Promise.all(
-        batches.map(async (batch) => {
-          const result = await fetch("/api/indexing", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(batch),
-          });
+      const queuedCount = await queueUrlsForIndexing(selectedUrlIds);
+      const alreadyIndexedCount = selectedUrlIds.length - queuedCount;
 
-          if (result.ok) {
-            setProgress((prev) => ({
-              ...prev,
-              processedFiles: prev.processedFiles + batch.length,
-            }));
-          } else {
-            console.error(
-              "Indexing failed for batch:",
-              batch,
-              result.statusText
-            );
-          }
-        })
-      );
-
-      console.log("Indexing successful");
-      setProgress((prev) => ({ ...prev, stage: "completed" }));
+      if (queuedCount === 0) {
+        setProgress((prev) => ({
+          ...prev,
+          stage: "no_new_urls",
+          newlyQueuedCount: 0,
+          alreadyIndexedCount: selectedUrlIds.length,
+        }));
+        setIsIndexing(false);
+        onIndexingComplete();
+      } else {
+        setQueuedIds(selectedUrlIds.slice(0, queuedCount));
+        setIsIndexingTriggered(true);
+        setProgress((prev) => ({
+          ...prev,
+          newlyQueuedCount: queuedCount,
+          alreadyIndexedCount,
+        }));
+      }
     } catch (error) {
-      console.error("Error during indexing:", error);
+      console.error("Error starting indexing process:", error);
       setProgress((prev) => ({ ...prev, stage: null }));
-    } finally {
       setIsIndexing(false);
-      onIndexingComplete();
     }
   };
 
@@ -158,43 +215,53 @@ export default function IndexingUI({
           onClick={handleIndexSelectedUrls}
           disabled={isIndexing || isEstimating || selectedUrlIds.length === 0}
         >
-          {isIndexing ? "Indexing..." : "Start Indexing"}
+          {isIndexing ? "Indexing" : "Start Indexing"}
+          {isIndexing && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
         </Button>
 
-        {(progress.stage === "estimating" ||
-          progress.stage === "indexing" ||
-          progress.stage === "completed") && (
+        {progress.stage === "no_new_urls" && (
+          <p className="mt-2 text-yellow-600">
+            All selected URLs ({progress.alreadyIndexedCount}) were already
+            indexed. No new indexing required.
+          </p>
+        )}
+
+        {(isIndexing || progress.stage === "completed") && (
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle>
-                {progress.stage === "estimating"
-                  ? "Estimation"
-                  : progress.stage === "indexing"
-                  ? "Indexing"
-                  : "Completed"}{" "}
-                Status
+              <CardTitle className="flex items-center">
+                Indexing Progress
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm mb-2">
-                {progress.stage === "estimating"
-                  ? `Estimating cost: ${progress.processedFiles} of ${progress.totalFiles} files processed`
-                  : progress.stage === "indexing"
-                  ? `Indexing: ${progress.processedFiles} of ${progress.totalFiles} files processed`
-                  : `Indexing completed: ${progress.processedFiles} of ${progress.totalFiles} files processed`}
+                Indexing: {indexingProgress.completed} of{" "}
+                {progress.newlyQueuedCount} new files processed
               </p>
               <Progress
-                value={(progress.processedFiles / progress.totalFiles) * 100}
+                value={
+                  (indexingProgress.completed / progress.newlyQueuedCount) * 100
+                }
               />
               <p className="text-sm mt-2">
                 Progress:{" "}
                 {(
-                  (progress.processedFiles / progress.totalFiles) *
+                  (indexingProgress.completed / progress.newlyQueuedCount) *
                   100
                 ).toFixed(2)}
                 %
               </p>
-              <p className="text-sm">Total tokens: {progress.totalTokens}</p>
+              {progress.alreadyIndexedCount > 0 && (
+                <p className="text-sm mt-2 text-gray-600">
+                  {progress.alreadyIndexedCount} URLs were already indexed and
+                  skipped.
+                </p>
+              )}
+              {progress.stage === "completed" && (
+                <p className="text-sm mt-2 text-green-600 font-semibold">
+                  Indexing completed successfully!
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

@@ -47,7 +47,8 @@ Explain&nbsp;products&nbsp;to&nbsp;website&nbsp;visitors&nbsp;&nbsp;·&nbsp; Exp
 - - [X] Add selected URLs to index, with cost estimate
 - - [X] Add cleanup function for stuck scrapers
 - - [X] Add scraping progress indicator (# scraped vs queued, ETA, ...)
-- - [ ] Add indexing status/queue?
+- - [X] Add indexing queue
+- - [X] Update scraping_url is_indexed when deleting from search index
 - - [ ] Make JS rendering optional setting
 - - [ ] Save links and page hierarchy in content
 - - [ ] Add background updates with cron jobs

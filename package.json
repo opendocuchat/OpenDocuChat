@@ -17,6 +17,7 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.1",
     "@sparticuz/chromium": "^127.0.0",
     "@sparticuz/chromium-min": "^127.0.0",
     "@upstash/ratelimit": "^2.0.2",

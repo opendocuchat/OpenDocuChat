@@ -11,11 +11,42 @@ export async function getDocuments() {
     ORDER BY created_at DESC
     LIMIT 100
   `;
-  
-  return result.rows.map(row => ({
+
+  return result.rows.map((row) => ({
     ...row,
-    embedding: [], // We're not fetching the embedding for performance reasons
-    content: "", // We're not fetching the content for performance reasons
-    metadata: {}, // We're not fetching the metadata for performance reasons
+    embedding: [],
+    content: "",
+    metadata: {},
   }));
+}
+
+export async function deleteDocumentsByDataSourceId(dataSourceId: string) {
+  try {
+    await sql`BEGIN`;
+
+    await sql`
+      UPDATE scraping_url
+      SET indexing_status = 'NOT_INDEXED'
+      WHERE id IN (
+        SELECT su.id
+        FROM scraping_url su
+        JOIN document d ON su.url = d.url
+        WHERE d.data_source_id = ${dataSourceId}
+          AND su.indexing_status = 'COMPLETED'
+      )
+    `;
+
+    await sql`
+      DELETE FROM document
+      WHERE data_source_id = ${dataSourceId}
+    `;
+
+    await sql`COMMIT`;
+
+    return { success: true };
+  } catch (error) {
+    await sql`ROLLBACK`;
+    console.error("Error deleting documents and updating scraping_url:", error);
+    throw new Error("Failed to delete documents and update scraping_url");
+  }
 }

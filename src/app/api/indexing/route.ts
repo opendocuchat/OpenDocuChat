@@ -10,53 +10,65 @@ export const maxDuration = 60;
 
 const MAX_TOKENS = 350;
 const OVERLAP_TOKENS = 50;
+const MAX_BATCH_SIZE = 20;
 
 export async function POST(request: Request) {
-  const scrapingUrlIds = await request.json();
+  // const scrapingUrlIds = await request.json();
   const created_at = new Date().toISOString();
   const client = await db.connect();
 
   try {
     await client.query("BEGIN");
 
-    for (const id of scrapingUrlIds) {
-      const result = await client.query(
-        `
-            SELECT id, url, content, scraping_run_id
-            FROM scraping_url
-            WHERE id = $1
-          `,
-        [id]
-      );
+    const result = await client.query(`
+      UPDATE scraping_url
+      SET indexing_status = 'PROCESSING'
+      WHERE id IN (
+        SELECT id
+        FROM scraping_url
+        WHERE indexing_status = 'QUEUED'
+        LIMIT 10
+        )
+        RETURNING id, url, content, scraping_run_id
+        `);
 
-      if (result.rows.length === 0) {
-        console.log(`No scraping URL found for id: ${id}`);
-        continue;
-      }
+    const scrapingUrls = result.rows;
 
-      const { url, content, scraping_run_id } = result.rows[0];
+    console.log(`Processing ${scrapingUrls.length} URLs for indexing`);
+    // Fetch all data_source_ids in one query
+    const scraping_run_ids = scrapingUrls.map((url) => url.scraping_run_id);
+    const dataSourceResult = await client.query(
+      `
+      SELECT id, data_source_id 
+      FROM scraping_run 
+      WHERE id = ANY($1)
+      `,
+      [scraping_run_ids]
+    );
+    const dataSourceMap = new Map(
+      dataSourceResult.rows.map((row) => [row.id, row.data_source_id])
+    );
 
+    const batchedChunks: string[] = [];
+    const urlChunkMap: Map<string, number[]> = new Map();
+
+    for (const { id, url, content, scraping_run_id } of scrapingUrls) {
+      console.log(`\nProcessing URL: ${url}`);
       if (!content) {
         console.log(`Empty content for URL: ${url}. Skipping indexing.`);
         continue;
       }
 
-      const dataSourceResult = await client.query(
-        `
-            SELECT data_source_id 
-            FROM scraping_run 
-            WHERE id = $1
-          `,
-        [scraping_run_id]
-      );
-
-      const data_source_id = dataSourceResult.rows[0].data_source_id;
+      const data_source_id = dataSourceMap.get(scraping_run_id);
+      console.log(`Data source ID: ${data_source_id}`);
 
       const contentChunks = splitTextIntoChunks(
         content,
         MAX_TOKENS,
         OVERLAP_TOKENS
       );
+
+      console.log(`Generated ${contentChunks.length} chunks for URL: ${url}`);
 
       if (contentChunks.length === 0) {
         console.log(
@@ -65,86 +77,44 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const embeddings = await Promise.all(
-        contentChunks.map(async (chunk) => {
-          const maxAttempts = 5;
-          const retryDelay = 500;
-          let attempts = 0;
-
-          while (attempts < maxAttempts) {
-            try {
-              console.log(`Getting embedding for chunk length: ${chunk.length}`);
-              const embeddingResponse = await together.embeddings.create({
-                model: "BAAI/bge-large-en-v1.5",
-                input: [chunk],
-              });
-              return embeddingResponse.data[0].embedding;
-            } catch (error) {
-              attempts++;
-              const delay = retryDelay * Math.pow(2, attempts);
-              console.log(`Error occurred. Retrying in ${delay}ms.... error:`, error);
-              await new Promise((resolve) => setTimeout(resolve, delay));
-            }
-          }
-          throw new Error(
-            `Failed to get embedding after ${maxAttempts} attempts`
-          );
-        })
+      batchedChunks.push(...contentChunks);
+      urlChunkMap.set(
+        url,
+        contentChunks.map(
+          (_, index) => batchedChunks.length - contentChunks.length + index
+        )
       );
 
-      const finalEmbedding =
-        embeddings.length > 1
-          ? embeddings
-              .reduce((acc, curr) => acc.map((val, idx) => val + curr[idx]))
-              .map((val) => val / embeddings.length)
-          : embeddings[0];
+      console.log(`Total batched chunks: ${batchedChunks.length}`);
 
-      const updateResult = await client.query(
-        `
-            UPDATE scraping_url
-            SET indexing_status = "NOT_INDEXED"
-            WHERE url = $1 AND indexing_status = "COMPLETED"
-            RETURNING id
-          `,
-        [url]
-      );
-
-      if ((updateResult.rowCount ?? 0) > 0) {
-        console.log(`Updated existing index for URL: ${url}`);
-      }
-
-      await client.query(
-        `
-            INSERT INTO document (url, content, embedding, active, data_source_id, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (url) 
-            DO UPDATE SET 
-              content = EXCLUDED.content, 
-              embedding = EXCLUDED.embedding, 
-              active = EXCLUDED.active, 
-              data_source_id = EXCLUDED.data_source_id, 
-              created_at = EXCLUDED.created_at
-          `,
-        [
-          url,
-          content,
-          JSON.stringify(finalEmbedding),
-          true,
-          data_source_id,
+      if (batchedChunks.length >= MAX_BATCH_SIZE) {
+        console.log(`\nProcessing batch of ${batchedChunks.length} chunks`);
+        await processEmbeddingBatch(
+          batchedChunks,
+          urlChunkMap,
+          client,
+          dataSourceMap,
           created_at,
-        ]
-      );
+          scrapingUrls
+        );
+        batchedChunks.length = 0;
+        urlChunkMap.clear();
+        console.log(
+          "Batch processing complete. Cleared batch and URL-chunk map."
+        );
+      }
+    }
 
-      await client.query(
-        `
-            UPDATE scraping_url
-            SET indexing_status = "COMPLETED"
-            WHERE id = $1
-          `,
-        [id]
+    if (batchedChunks.length > 0) {
+      console.log(`\nProcessing final batch of ${batchedChunks.length} chunks`);
+      await processEmbeddingBatch(
+        batchedChunks,
+        urlChunkMap,
+        client,
+        dataSourceMap,
+        created_at,
+        scrapingUrls
       );
-
-      console.log("Indexed URL:", url);
     }
 
     await client.query("COMMIT");
@@ -156,6 +126,127 @@ export async function POST(request: Request) {
     return new Response("Error indexing URLs", { status: 500 });
   } finally {
     client.release();
+  }
+}
+
+async function processEmbeddingBatch(
+  batchedChunks: string[],
+  urlChunkMap: Map<string, number[]>,
+  client: any,
+  dataSourceMap: Map<string, string>,
+  created_at: string,
+  scrapingUrls: any[]
+) {
+  console.log(`Getting embeddings for ${batchedChunks.length} chunks`);
+  const embeddings = await getEmbeddings(batchedChunks);
+
+  for (const [url, chunkIndices] of Array.from(urlChunkMap.entries())) {
+    console.log(`\nProcessing embeddings for URL: ${url}`);
+    console.log(`Number of chunks for this URL: ${chunkIndices.length}`);
+
+    const urlEmbeddings = chunkIndices.map((index) => embeddings[index]);
+    const finalEmbedding = averageEmbeddings(urlEmbeddings);
+
+    const scraping_run_id = scrapingUrls.find(
+      (su) => su.url === url
+    )?.scraping_run_id;
+    const data_source_id = dataSourceMap.get(scraping_run_id);
+
+    if (data_source_id) {
+      console.log(`Updating database for URL: ${url}`);
+      await updateDatabase(
+        client,
+        url,
+        batchedChunks[chunkIndices[0]],
+        finalEmbedding,
+        data_source_id,
+        created_at
+      );
+    } else {
+      console.error(`No data_source_id found for URL: ${url}`);
+    }
+  }
+}
+
+async function getEmbeddings(chunks: string[]): Promise<number[][]> {
+  const maxAttempts = 5;
+  const retryDelay = 500;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const embeddingResponse = await together.embeddings.create({
+        model: "BAAI/bge-large-en-v1.5",
+        input: chunks,
+      });
+      return embeddingResponse.data.map((item) => item.embedding);
+    } catch (error) {
+      attempts++;
+      const delay = retryDelay * Math.pow(2, attempts);
+      console.log(`Error occurred. Retrying in ${delay}ms.... error:`, error);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`Failed to get embeddings after ${maxAttempts} attempts`);
+}
+
+function averageEmbeddings(embeddings: number[][]): number[] {
+  if (embeddings.length === 1) return embeddings[0];
+  return embeddings
+    .reduce((acc, curr) => acc.map((val, idx) => val + curr[idx]))
+    .map((val) => val / embeddings.length);
+}
+
+async function updateDatabase(
+  client: any,
+  url: string,
+  content: string,
+  embedding: number[],
+  data_source_id: string,
+  created_at: string
+) {
+  try {
+    await client.query("BEGIN");
+
+    // Update scraping_url table
+    await client.query(
+      `
+      UPDATE scraping_url
+      SET indexing_status = 'COMPLETED'
+      WHERE url = $1 AND indexing_status = 'PROCESSING'
+      `,
+      [url]
+    );
+
+    // Update or insert into document table
+    await client.query(
+      `
+      INSERT INTO document (url, content, embedding, active, data_source_id, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (url) 
+      DO UPDATE SET 
+        content = EXCLUDED.content, 
+        embedding = EXCLUDED.embedding, 
+        active = EXCLUDED.active, 
+        data_source_id = EXCLUDED.data_source_id, 
+        created_at = EXCLUDED.created_at
+      `,
+      [
+        url,
+        content,
+        JSON.stringify(embedding),
+        true,
+        data_source_id,
+        created_at,
+      ]
+    );
+
+    await client.query("COMMIT");
+    console.log("Indexed URL:", url);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error(`Error updating database for URL ${url}:`, error);
+    // Don't throw the error, just log it and continue with other URLs
   }
 }
 

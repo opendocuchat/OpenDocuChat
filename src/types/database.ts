@@ -60,7 +60,12 @@ export enum ScrapingStatus {
   FAILED = "FAILED",
 }
 
-type IndexingStatus = "NOT_INDEXED" | "INDEXED" | "INDEXING_IN_PROGRESS" | "INDEXING_FAILED";
+export type IndexingStatus =
+  | "NOT_INDEXED"
+  | "QUEUED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
 
 export interface ScrapingUrl {
   id: number;
