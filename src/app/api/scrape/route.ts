@@ -329,7 +329,8 @@ async function scrapeUrl(
     .filter((link) => isIndexableUrl(link, baseUrl, basePath, settings))
     .map((link) => {
       const url = new URL(link);
-      url.hash = "";
+      url.search = '';
+      url.hash = '';
       return url.toString();
     });
 
