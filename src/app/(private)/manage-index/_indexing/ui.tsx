@@ -47,6 +47,8 @@ export default function IndexingUI({
     queued: 0,
     completed: 0,
   });
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (selectedUrlIds.length > 0) {
@@ -104,8 +106,8 @@ export default function IndexingUI({
     if (isIndexingTriggered) {
       fetchProgress();
       triggerIndexing();
-      progressIntervalId = setInterval(fetchProgress, 5000);
-      indexingIntervalId = setInterval(triggerIndexing, 1000);
+      progressIntervalId = setInterval(fetchProgress, 3000);
+      indexingIntervalId = setInterval(triggerIndexing, 3000);
     }
 
     return () => {
@@ -113,6 +115,22 @@ export default function IndexingUI({
       if (indexingIntervalId) clearInterval(indexingIntervalId);
     };
   }, [isIndexingTriggered, queuedIds, onIndexingComplete]);
+
+  useEffect(() => {
+    if (isIndexingTriggered) {
+      setStartTime(Date.now());
+    }
+  }, [isIndexingTriggered]);
+
+  useEffect(() => {
+    if (startTime && indexingProgress.completed > 0) {
+      const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+      const averageTimePerFile = elapsedTime / indexingProgress.completed;
+      const remainingFiles = progress.newlyQueuedCount - indexingProgress.completed;
+      const estimatedTime = averageTimePerFile * remainingFiles;
+      setEstimatedTimeRemaining(estimatedTime);
+    }
+  }, [startTime, indexingProgress, progress.newlyQueuedCount]);
 
   const estimateCost = async () => {
     setIsEstimating(true);
@@ -250,6 +268,11 @@ export default function IndexingUI({
                 ).toFixed(2)}
                 %
               </p>
+              {estimatedTimeRemaining !== null && (
+                <p className="text-sm mt-2">
+                  Estimated time remaining: {Math.round(estimatedTimeRemaining / 60)} minutes
+                </p>
+              )}
               {progress.alreadyIndexedCount > 0 && (
                 <p className="text-sm mt-2 text-gray-600">
                   {progress.alreadyIndexedCount} URLs were already indexed and
@@ -260,6 +283,12 @@ export default function IndexingUI({
                 <p className="text-sm mt-2 text-green-600 font-semibold">
                   Indexing completed successfully!
                 </p>
+              )}
+              {isIndexing && (
+                <div className="flex items-center mt-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm">Indexing in progress...</span>
+                </div>
               )}
             </CardContent>
           </Card>

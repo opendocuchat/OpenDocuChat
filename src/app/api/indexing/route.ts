@@ -2,35 +2,29 @@ import { db } from "@vercel/postgres";
 import { encodingForModel } from "js-tiktoken";
 import Together from "together-ai";
 
+export const maxDuration = 60;
+
 const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
-const MAX_TOKENS = 300;
+const MAX_TOKENS = 250;
 const encoder = encodingForModel("gpt-3.5-turbo");
-
-function logWithTimestamp(message: string) {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${message}`);
-}
-
-const timeout = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function POST(request: Request) {
   const client = await db.connect();
-  let id: number | null = null;
+  let processedIds: number[] = [];
 
   try {
-    // Get a single queued URL
     const result = await client.query(`
       UPDATE scraping_url
       SET indexing_status = 'PROCESSING'
-      WHERE id = (
+      WHERE id IN (
         SELECT id
         FROM scraping_url
         WHERE indexing_status = 'QUEUED'
-        ORDER BY id
-        LIMIT 1
+        ORDER BY RANDOM()
+        LIMIT 20
         FOR UPDATE SKIP LOCKED
       )
       RETURNING id, url, content, scraping_run_id
@@ -40,79 +34,132 @@ export async function POST(request: Request) {
       return new Response("No URLs to process", { status: 200 });
     }
 
-    const { id, url, content, scraping_run_id } = result.rows[0];
+    const documents = result.rows;
+    const allChunks: { id: number; chunk: string; data_source_id: string }[] =
+      [];
 
-    // Get data_source_id
-    const dataSourceResult = await client.query(
-      `SELECT data_source_id FROM scraping_run WHERE id = $1`,
-      [scraping_run_id]
-    );
-    const data_source_id = dataSourceResult.rows[0].data_source_id;
+    for (const doc of documents) {
+      const { id, url, content, scraping_run_id } = doc;
 
-    // Split content into chunks
-    const chunks = splitTextIntoChunks(content, MAX_TOKENS);
-    logWithTimestamp(`Total chunks: ${chunks.length}`);
+      try {
+        // Get data_source_id
+        const dataSourceResult = await client.query(
+          `SELECT data_source_id FROM scraping_run WHERE id = $1`,
+          [scraping_run_id]
+        );
+        const data_source_id = dataSourceResult.rows[0].data_source_id;
 
-    // Get embeddings
-    const embeddings = await getEmbeddings(chunks);
+        // Split content into chunks
+        const chunks = splitTextIntoChunks(content, MAX_TOKENS);
+
+        // Add chunks to allChunks array
+        allChunks.push(
+          ...chunks.map((chunk) => ({ id, chunk, data_source_id }))
+        );
+      } catch (error) {
+        await client.query(
+          `UPDATE scraping_url SET indexing_status = 'QUEUED' WHERE id = $1`,
+          [id]
+        );
+      }
+    }
+
+    // Process all chunks in batches
+    const embeddings = await getEmbeddings(allChunks);
 
     if (embeddings === null) {
-      // Reset URL status to 'QUEUED' if embedding fails
-      await client.query(
-        `UPDATE scraping_url SET indexing_status = 'QUEUED' WHERE id = $1`,
-        [id]
-      );
-      return new Response("Indexing failed, URL reset to QUEUED", { status: 200 });
+      throw new Error("Failed to get embeddings");
     }
 
-    // Combine embeddings
-    const finalEmbedding = averageEmbeddings(embeddings);
+    // Update database for each document
+    for (const doc of documents) {
+      const { id, url, content } = doc;
+      const docEmbeddings = embeddings.filter((e) => e.id === id);
 
-    // Save to database
-    await updateDatabase(client, id, url, content, finalEmbedding, data_source_id);
+      if (docEmbeddings.length > 0) {
+        const finalEmbedding = averageEmbeddings(
+          docEmbeddings.map((e) => e.embedding)
+        );
+        await updateDatabase(
+          client,
+          id,
+          url,
+          content,
+          finalEmbedding,
+          docEmbeddings[0].data_source_id
+        );
+        processedIds.push(id);
+      }
+    }
 
-    return new Response("Indexing completed", { status: 200 });
+    // Set remaining documents back to QUEUED
+    const remainingIds = documents
+      .map((doc) => doc.id)
+      .filter((id) => !processedIds.includes(id));
+    if (remainingIds.length > 0) {
+      await client.query(
+        `UPDATE scraping_url SET indexing_status = 'QUEUED' WHERE id = ANY($1)`,
+        [remainingIds]
+      );
+    }
+
+    return new Response(
+      `Indexing completed for ${processedIds.length} documents`,
+      { status: 200 }
+    );
   } catch (error) {
-    logWithTimestamp(`Error indexing URL: ${error}`);
-    if (id) {
-      await client.query(
-        `UPDATE scraping_url SET indexing_status = 'FAILED' WHERE id = $1`,
-        [id]
-      );
-    }
-    return new Response("Error indexing URL", { status: 500 });
+    return new Response("Error in indexing process", { status: 500 });
   } finally {
     client.release();
   }
 }
 
-async function getEmbeddings(chunks: string[]): Promise<number[][] | null> {
-  const embeddings: number[][] = [];
-  const batchSize = 10;
+async function getEmbeddings(
+  chunks: { id: number; chunk: string; data_source_id: string }[]
+): Promise<
+  { id: number; embedding: number[]; data_source_id: string }[] | null
+> {
+  try {
+    const response = await together.embeddings.create({
+      model: "BAAI/bge-large-en-v1.5",
+      input: chunks.map((chunkData) => chunkData.chunk),
+    });
 
-  for (let i = 0; i < chunks.length; i += batchSize) {
-    const batch = chunks.slice(i, i + batchSize);
-    const tokenCounts = batch.map(chunk => encoder.encode(chunk).length);
-    
-    logWithTimestamp(`API call ${i / batchSize + 1}: Processing ${batch.length} chunks`);
-    logWithTimestamp(`Token counts: ${tokenCounts.join(', ')}`);
-
-    try {
-      const response = await together.embeddings.create({
-        model: "BAAI/bge-large-en-v1.5",
-        input: batch,
-      });
-      
-      embeddings.push(...response.data.map(item => item.embedding));
-      logWithTimestamp(`API call ${i / batchSize + 1}: Successful`);
-    } catch (error) {
-      logWithTimestamp(`API call ${i / batchSize + 1}: Error getting embeddings: ${error}`);
-      return null; // Indicate failure
-    }
+    return response.data.map((item, index) => ({
+      id: chunks[index].id,
+      embedding: item.embedding,
+      data_source_id: chunks[index].data_source_id,
+    }));
+  } catch (error) {
+    console.error(`Error getting embeddings: ${error}`);
+    return null;
   }
+}
 
-  logWithTimestamp(`Total API calls: ${Math.ceil(chunks.length / batchSize)}`);
-  return embeddings;
+async function processEmbeddingBatch(
+  batch: { id: number; chunk: string; data_source_id: string }[]
+): Promise<
+  { id: number; embedding: number[]; data_source_id: string }[] | null
+> {
+  const totalTokens = batch.reduce(
+    (sum, chunkData) => sum + encoder.encode(chunkData.chunk).length,
+    0
+  );
+
+  try {
+    const response = await together.embeddings.create({
+      model: "BAAI/bge-large-en-v1.5",
+      input: batch.map((chunkData) => chunkData.chunk),
+    });
+    return response.data.map((item, index) => ({
+      id: batch[index].id,
+      embedding: item.embedding,
+      data_source_id: batch[index].data_source_id,
+    }));
+  } catch (error) {
+    console.error(`Error getting embeddings: ${error}`);
+    return null;
+  }
 }
 
 function averageEmbeddings(embeddings: number[][]): number[] {
@@ -145,7 +192,6 @@ async function updateDatabase(
     );
 
     if (result.rowCount === 0) {
-      logWithTimestamp(`URL ${url} was not in PROCESSING state. Skipping update.`);
       await client.query("ROLLBACK");
       return;
     }
@@ -176,14 +222,10 @@ async function updateDatabase(
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
-    logWithTimestamp(`Error updating database for URL ${url}: ${error}`);
   }
 }
 
-function splitTextIntoChunks(
-  text: string | null,
-  maxTokens: number
-): string[] {
+function splitTextIntoChunks(text: string | null, maxTokens: number): string[] {
   if (!text) {
     return [];
   }
@@ -197,11 +239,8 @@ function splitTextIntoChunks(
     if (currentChunk.length >= maxTokens || i === tokens.length - 1) {
       const chunkText = encoder.decode(currentChunk);
       chunks.push(chunkText);
-      logWithTimestamp(`Chunk ${chunks.length} token count: ${currentChunk.length}`);
       currentChunk = [];
     }
   }
-
-  logWithTimestamp(`Total chunks: ${chunks.length}`);
   return chunks;
 }
