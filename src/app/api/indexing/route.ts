@@ -6,169 +6,113 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
 });
 
-export const maxDuration = 60;
+const MAX_TOKENS = 300;
+const encoder = encodingForModel("gpt-3.5-turbo");
 
-const MAX_TOKENS = 350;
-const OVERLAP_TOKENS = 50;
-const MAX_BATCH_SIZE = 20;
+function logWithTimestamp(message: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+}
+
+const timeout = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function POST(request: Request) {
-  // const scrapingUrlIds = await request.json();
-  const created_at = new Date().toISOString();
   const client = await db.connect();
+  let id: number | null = null;
 
   try {
-    await client.query("BEGIN");
-
+    // Get a single queued URL
     const result = await client.query(`
       UPDATE scraping_url
       SET indexing_status = 'PROCESSING'
-      WHERE id IN (
+      WHERE id = (
         SELECT id
         FROM scraping_url
         WHERE indexing_status = 'QUEUED'
-        LIMIT 10
-        )
-        RETURNING id, url, content, scraping_run_id
-        `);
+        ORDER BY id
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING id, url, content, scraping_run_id
+    `);
 
-    const scrapingUrls = result.rows;
+    if (result.rows.length === 0) {
+      return new Response("No URLs to process", { status: 200 });
+    }
 
-    const scraping_run_ids = scrapingUrls.map((url) => url.scraping_run_id);
+    const { id, url, content, scraping_run_id } = result.rows[0];
+
+    // Get data_source_id
     const dataSourceResult = await client.query(
-      `
-      SELECT id, data_source_id 
-      FROM scraping_run 
-      WHERE id = ANY($1)
-      `,
-      [scraping_run_ids]
+      `SELECT data_source_id FROM scraping_run WHERE id = $1`,
+      [scraping_run_id]
     );
-    const dataSourceMap = new Map(
-      dataSourceResult.rows.map((row) => [row.id, row.data_source_id])
-    );
+    const data_source_id = dataSourceResult.rows[0].data_source_id;
 
-    const batchedChunks: string[] = [];
-    const urlChunkMap: Map<string, number[]> = new Map();
+    // Split content into chunks
+    const chunks = splitTextIntoChunks(content, MAX_TOKENS);
+    logWithTimestamp(`Total chunks: ${chunks.length}`);
 
-    for (const { id, url, content, scraping_run_id } of scrapingUrls) {
-      if (!content) {
-        continue;
-      }
+    // Get embeddings
+    const embeddings = await getEmbeddings(chunks);
 
-      const data_source_id = dataSourceMap.get(scraping_run_id);
-
-      const contentChunks = splitTextIntoChunks(
-        content,
-        MAX_TOKENS,
-        OVERLAP_TOKENS
+    if (embeddings === null) {
+      // Reset URL status to 'QUEUED' if embedding fails
+      await client.query(
+        `UPDATE scraping_url SET indexing_status = 'QUEUED' WHERE id = $1`,
+        [id]
       );
-
-
-      if (contentChunks.length === 0) {
-        continue;
-      }
-
-      batchedChunks.push(...contentChunks);
-      urlChunkMap.set(
-        url,
-        contentChunks.map(
-          (_, index) => batchedChunks.length - contentChunks.length + index
-        )
-      );
-
-
-      if (batchedChunks.length >= MAX_BATCH_SIZE) {
-        await processEmbeddingBatch(
-          batchedChunks,
-          urlChunkMap,
-          client,
-          dataSourceMap,
-          created_at,
-          scrapingUrls
-        );
-        batchedChunks.length = 0;
-        urlChunkMap.clear();
-      }
+      return new Response("Indexing failed, URL reset to QUEUED", { status: 200 });
     }
 
-    if (batchedChunks.length > 0) {
-      await processEmbeddingBatch(
-        batchedChunks,
-        urlChunkMap,
-        client,
-        dataSourceMap,
-        created_at,
-        scrapingUrls
-      );
-    }
+    // Combine embeddings
+    const finalEmbedding = averageEmbeddings(embeddings);
 
-    await client.query("COMMIT");
+    // Save to database
+    await updateDatabase(client, id, url, content, finalEmbedding, data_source_id);
 
-    return new Response("Indexing completed successfully", { status: 200 });
+    return new Response("Indexing completed", { status: 200 });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error indexing URLs:", error);
-    return new Response("Error indexing URLs", { status: 500 });
+    logWithTimestamp(`Error indexing URL: ${error}`);
+    if (id) {
+      await client.query(
+        `UPDATE scraping_url SET indexing_status = 'FAILED' WHERE id = $1`,
+        [id]
+      );
+    }
+    return new Response("Error indexing URL", { status: 500 });
   } finally {
     client.release();
   }
 }
 
-async function processEmbeddingBatch(
-  batchedChunks: string[],
-  urlChunkMap: Map<string, number[]>,
-  client: any,
-  dataSourceMap: Map<string, string>,
-  created_at: string,
-  scrapingUrls: any[]
-) {
-  const embeddings = await getEmbeddings(batchedChunks);
+async function getEmbeddings(chunks: string[]): Promise<number[][] | null> {
+  const embeddings: number[][] = [];
+  const batchSize = 10;
 
-  for (const [url, chunkIndices] of Array.from(urlChunkMap.entries())) {
+  for (let i = 0; i < chunks.length; i += batchSize) {
+    const batch = chunks.slice(i, i + batchSize);
+    const tokenCounts = batch.map(chunk => encoder.encode(chunk).length);
+    
+    logWithTimestamp(`API call ${i / batchSize + 1}: Processing ${batch.length} chunks`);
+    logWithTimestamp(`Token counts: ${tokenCounts.join(', ')}`);
 
-    const urlEmbeddings = chunkIndices.map((index) => embeddings[index]);
-    const finalEmbedding = averageEmbeddings(urlEmbeddings);
-
-    const scraping_run_id = scrapingUrls.find(
-      (su) => su.url === url
-    )?.scraping_run_id;
-    const data_source_id = dataSourceMap.get(scraping_run_id);
-
-    if (data_source_id) {
-      await updateDatabase(
-        client,
-        url,
-        batchedChunks[chunkIndices[0]],
-        finalEmbedding,
-        data_source_id,
-        created_at
-      );
-    } else {
-      console.error(`No data_source_id found for URL: ${url}`);
-    }
-  }
-}
-
-async function getEmbeddings(chunks: string[]): Promise<number[][]> {
-  const maxAttempts = 5;
-  const retryDelay = 500;
-  let attempts = 0;
-
-  while (attempts < maxAttempts) {
     try {
-      const embeddingResponse = await together.embeddings.create({
+      const response = await together.embeddings.create({
         model: "BAAI/bge-large-en-v1.5",
-        input: chunks,
+        input: batch,
       });
-      return embeddingResponse.data.map((item) => item.embedding);
+      
+      embeddings.push(...response.data.map(item => item.embedding));
+      logWithTimestamp(`API call ${i / batchSize + 1}: Successful`);
     } catch (error) {
-      attempts++;
-      const delay = retryDelay * Math.pow(2, attempts);
-      console.error(`Error occurred. Retrying in ${delay}ms.... error:`, error);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      logWithTimestamp(`API call ${i / batchSize + 1}: Error getting embeddings: ${error}`);
+      return null; // Indicate failure
     }
   }
-  throw new Error(`Failed to get embeddings after ${maxAttempts} attempts`);
+
+  logWithTimestamp(`Total API calls: ${Math.ceil(chunks.length / batchSize)}`);
+  return embeddings;
 }
 
 function averageEmbeddings(embeddings: number[][]): number[] {
@@ -180,24 +124,31 @@ function averageEmbeddings(embeddings: number[][]): number[] {
 
 async function updateDatabase(
   client: any,
+  id: number,
   url: string,
   content: string,
   embedding: number[],
-  data_source_id: string,
-  created_at: string
+  data_source_id: string
 ) {
   try {
     await client.query("BEGIN");
 
     // Update scraping_url table
-    await client.query(
+    const result = await client.query(
       `
       UPDATE scraping_url
       SET indexing_status = 'COMPLETED'
-      WHERE url = $1 AND indexing_status = 'PROCESSING'
+      WHERE id = $1 AND indexing_status = 'PROCESSING'
+      RETURNING id
       `,
-      [url]
+      [id]
     );
+
+    if (result.rowCount === 0) {
+      logWithTimestamp(`URL ${url} was not in PROCESSING state. Skipping update.`);
+      await client.query("ROLLBACK");
+      return;
+    }
 
     // Update or insert into document table
     await client.query(
@@ -218,36 +169,39 @@ async function updateDatabase(
         JSON.stringify(embedding),
         true,
         data_source_id,
-        created_at,
+        new Date().toISOString(),
       ]
     );
 
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error(`Error updating database for URL ${url}:`, error);
-    // Don't throw the error, just log it and continue with other URLs
+    logWithTimestamp(`Error updating database for URL ${url}: ${error}`);
   }
 }
 
 function splitTextIntoChunks(
   text: string | null,
-  maxTokens: number,
-  overlapTokens: number
+  maxTokens: number
 ): string[] {
   if (!text) {
     return [];
   }
 
-  const encoder = encodingForModel("gpt-3.5-turbo");
   const tokens = encoder.encode(text);
   const chunks: string[] = [];
+  let currentChunk: number[] = [];
 
-  for (let i = 0; i < tokens.length; i += maxTokens - overlapTokens) {
-    const chunkTokens = tokens.slice(i, i + maxTokens);
-    const chunkText = encoder.decode(chunkTokens);
-    chunks.push(chunkText);
+  for (let i = 0; i < tokens.length; i++) {
+    currentChunk.push(tokens[i]);
+    if (currentChunk.length >= maxTokens || i === tokens.length - 1) {
+      const chunkText = encoder.decode(currentChunk);
+      chunks.push(chunkText);
+      logWithTimestamp(`Chunk ${chunks.length} token count: ${currentChunk.length}`);
+      currentChunk = [];
+    }
   }
 
+  logWithTimestamp(`Total chunks: ${chunks.length}`);
   return chunks;
 }

@@ -24,7 +24,6 @@ interface IndexingProgress {
 }
 
 const COST_PER_1M_TOKENS = 0.016;
-const INDEXING_INTERVAL = 10000;
 
 export default function IndexingUI({
   selectedUrlIds,
@@ -106,7 +105,7 @@ export default function IndexingUI({
       fetchProgress();
       triggerIndexing();
       progressIntervalId = setInterval(fetchProgress, 5000);
-      indexingIntervalId = setInterval(triggerIndexing, 10000);
+      indexingIntervalId = setInterval(triggerIndexing, 1000);
     }
 
     return () => {
